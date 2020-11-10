@@ -20,6 +20,8 @@ cv_loop_train_iter(
 )
 }
 \arguments{
+\item{ii}{integer (probably not needed)}
+
 \item{data}{input matrix, of dimension nobs x nvars; each row is an observation vector.
 Since this is an input to \code{glmnet}, it should be the format that can be used
 with \code{glmnet}}

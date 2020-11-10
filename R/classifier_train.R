@@ -167,7 +167,7 @@ get_selected_features <- function(fit, features) {
 
 #' A function train a model with CV
 #'
-#' @param ii
+#' @param ii integer (probably not needed)
 #' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
 #'             Since this is an input to \code{glmnet}, it should be the format that can be used
 #'             with \code{glmnet}

@@ -43,13 +43,22 @@ plot_projection <- function(se, reduction = "umap", feature = NA) {
   projection_df <- data.frame(name = rownames(SummarizedExperiment::colData(se)),
                               x = S4Vectors::metadata(se)[[reduction]][[1]],
                               y = S4Vectors::metadata(se)[[reduction]][[2]])
+  # to keep all other column data and make them available
+  projection_df <- cbind(
+    projection_df,
+    colData(se)
+  )
   if (!is.na(feature)) {
     projection_df <- cbind(projection_df, feature = se[[feature]])
+    gp <-
+      ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y,
+                                                  color = feature, label = name))
+  } else {
+    gp <-
+      ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y, label = name))
   }
-  colnames(projection_df)[4] = "feature"
 
-  ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y,
-                                              color = feature, label = name)) +
+  gp +
     ggplot2::geom_point() +
     ggplot2::xlab(paste(reduction, "1", sep = "_")) +
     ggplot2::ylab(paste(reduction, "2", sep = "_")) +
