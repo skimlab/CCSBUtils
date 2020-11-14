@@ -25,19 +25,14 @@ predict.type <- function(model, data, type = "raw") {
 #'     row.names (selected features),
 #'     pred (predicted outcomes), and
 #'     prob (probabilities of predicted outcomes)
-prediction_tables <- function(data, cls, models) {
+prediction_tables <- function(data, cls, model) {
   ret <- list()
   ret[["class"]] <- cls
   ret[["trained"]] <- rownames(data) %in% models$train_samples
   ret[["row.names"]] <- rownames(data)
-  ret[["pred"]] <- list()
-  nn <- names(models$models)
-  for (n in nn) {
-    ret$pred[[n]] <-
-      data.frame(pred = predict.type(models$models[[n]], data),
-                 prob = predict.type(models$models[[n]], data, type = "prob"))
-  }
-
+  ret[["pred"]] <-
+    data.frame(pred = predict.type(model, data),
+               prob = predict.type(model, data, type = "prob"))
   ret
 }
 
@@ -50,23 +45,18 @@ prediction_summary <- function(pred_tbls) {
   ret <- list(class = pred_tbls$class, trained = pred_tbls$trained, row.names = pred_tbls$row.names,
               summary = list())
 
-  nn <- names(pred_tbls$pred)
-  for (n in nn) {
-    ret$summary[[n]]$p.table <- pred_tbls$pred[[n]]
-    ret$summary[[n]]$confusion <- confusionMatrix(pred_tbls$pred[[n]]$pred, pred_tbls$class)
-    ret$summary[[n]]$roc <- pROC::roc(pred_tbls$class, pred_tbls$pred[[n]][[2]])  # prob.[type]
+  ret$summary$p.table <- pred_tbls$pred
+  ret$summary$confusion <- confusionMatrix(pred_tbls$pred$pred, pred_tbls$class)
+  ret$summary$roc <- pROC::roc(pred_tbls$class, pred_tbls$pred[[2]])  # prob.[type]
 
-    ret$summary[[n]]$accuracy <- ret$summary[[n]]$confusion$overall[["Accuracy"]]
-    ret$summary[[n]]$kappa <- ret$summary[[n]]$confusion$overall[["Kappa"]]
-    ret$summary[[n]]$auc <- auc(ret$summary[[n]]$roc)
-    ret$summary[[n]]$F1 <- ret$summary[[n]]$confusion$byClass[["F1"]]
-    ret$summary[[n]]$NPV <- ret$summary[[n]]$confusion$byClass[["Neg Pred Value"]]
-    ret$summary[[n]]$PPV <- ret$summary[[n]]$confusion$byClass[["Pos Pred Value"]]
-    ret$summary[[n]]$sensitivity <- ret$summary[[n]]$confusion$byClass[["Sensitivity"]]
-    ret$summary[[n]]$specificity <- ret$summary[[n]]$confusion$byClass[["Specificity"]]
-    # ret$summary[[n]]$precision <- ret$summary[[n]]$confusion$byClass[["Precision"]] # same as PPV
-    # ret$summary[[n]]$recall <- ret$summary[[n]]$confusion$byClass[["Recall"]]  # same as sensitivity
-  }
+  ret$summary$accuracy <- ret$summary$confusion$overall[["Accuracy"]]
+  ret$summary$kappa <- ret$summary$confusion$overall[["Kappa"]]
+  ret$summary$auc <- auc(ret$summary$roc)
+  ret$summary$F1 <- ret$summary$confusion$byClass[["F1"]]
+  ret$summary$NPV <- ret$summary$confusion$byClass[["Neg Pred Value"]]
+  ret$summary$PPV <- ret$summary$confusion$byClass[["Pos Pred Value"]]
+  ret$summary$sensitivity <- ret$summary$confusion$byClass[["Sensitivity"]]
+  ret$summary$specificity <- ret$summary$confusion$byClass[["Specificity"]]
 
   ret
 }
@@ -106,19 +96,18 @@ models_performance_summary <-
 #'
 #' @param p.summary Either "train" or "test" slot of an output of \code{\link{models_performance_summary}}
 #' @param slot An index
-extract_metrics <- function(p.summary, slot = 1) {
+extract_metrics <- function(p.summary) {
   data.frame(
     idx = 1:length(p.summary),
-    accuracy = sapply(p.summary, function(x) x$summary[[slot]][["accuracy"]]),
-    kappa = sapply(p.summary, function(x) x$summary[[slot]][["kappa"]]),
-    auc = sapply(p.summary, function(x) x$summary[[slot]][["auc"]]),
-    F1 = sapply(p.summary, function(x) x$summary[[slot]][["F1"]]),
-    NPV = sapply(p.summary, function(x) x$summary[[slot]][["NPV"]]),
-    PPV = sapply(p.summary, function(x) x$summary[[slot]][["PPV"]]),
-    sensitivity = sapply(p.summary, function(x) x$summary[[slot]][["sensitivity"]]),
-    specificity = sapply(p.summary, function(x) x$summary[[slot]][["specificity"]])
-    # precision = sapply(p.summary, function(x) x$summary[[slot]][["precision"]]),
-    # recall = sapply(p.summary, function(x) x$summary[[slot]][["recall"]])
+    accuracy = sapply(p.summary, function(x) x$summary[["accuracy"]]),
+    kappa = sapply(p.summary, function(x) x$summary[["kappa"]]),
+    roc = sapply(p.summary, function(x) x$summary[["roc"]]),
+    auc = sapply(p.summary, function(x) x$summary[["auc"]]),
+    F1 = sapply(p.summary, function(x) x$summary[["F1"]]),
+    NPV = sapply(p.summary, function(x) x$summary[["NPV"]]),
+    PPV = sapply(p.summary, function(x) x$summary[["PPV"]]),
+    sensitivity = sapply(p.summary, function(x) x$summary[["sensitivity"]]),
+    specificity = sapply(p.summary, function(x) x$summary[["specificity"]])
   )
 }
 
@@ -126,7 +115,7 @@ extract_metrics <- function(p.summary, slot = 1) {
 #'
 #' @param p.summary Either "train" or "test" slot of an output of \code{\link{models_performance_summary}}
 extract_metrics_all <- function(p.summary) {
-  # p.summary is a list ("uniform", "weighted") of arrays (K trials) of performance summary.
+  # p.summary is a array (K trials) of performance summary.
   # nn gets if both "uniform" and "weighted" are tried.
   nn <- names(p.summary[[1]]$summary)
   r <- list()
@@ -148,8 +137,12 @@ classification_summary_workflow <- function(cv_trained, show_feature_map = FALSE
   cv_trained_summary[["performance_summary"]] <- models_performance_summary(cv_trained)
   cv_trained_summary[["accuracy"]] <-
     bind_rows(
-      cbind(type = "train", extract_metrics_all(cv_trained_summary[["performance_summary"]][["train"]])),
-      cbind(type = "test", extract_metrics_all(cv_trained_summary[["performance_summary"]][["test"]]))
+      cbind(feature_weight = cv_trained$models[[1]]$feature_weights,
+            type = "train",
+            extract_metrics(cv_trained_summary[["performance_summary"]][["train"]])),
+      cbind(feature_weight = cv_trained$models[[1]]$feature_weights,
+            type = "test",
+            extract_metrics(cv_trained_summary[["performance_summary"]][["test"]]))
     )
 
   # print(cv_trained_summary[["accuracy"]])
@@ -230,14 +223,14 @@ classification_summary_workflow <- function(cv_trained, show_feature_map = FALSE
 prediction_consensus_summary <- function(cv_trained) {
   lapply(cv_trained$models,
          function(m) {
-           predict.type(m$models[["uniform"]], cv_trained$data)
+           predict.type(m, cv_trained$data)
          }) -> x
   names(x) <- sprintf("X%03d", 1:length(cv_trained$models))
 
   lapply(cv_trained$models,
          function(m) {
            bind_cols(sample_id = rownames(cv_trained$data),
-                     predict.type(m$models[["uniform"]], cv_trained$data, type = "prob"))
+                     predict.type(m, cv_trained$data, type = "prob"))
          }) -> x.prob
   names(x.prob) <- sprintf("X%03d", 1:length(cv_trained$models))
 

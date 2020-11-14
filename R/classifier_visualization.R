@@ -222,6 +222,58 @@ construct_feature_heatmaps <- function(cv_trained_summary) {
   cv_trained_summary
 }
 
+
+#' A function to construct boxplots for selected features
+#'
+#' @param dd A \code{matrix} or \code{data.frame}
+#'           where each row is an observation
+#' @param cls A set of classes, either in \code{factor}
+#' @param df fold difference, computed by \code{compute_difference}
+#' @param order.by which feature to order boxplots, typically `mean` or `diff`
+feature_boxplots <- function(dd, cls, df = data.frame(), order.by = "") {
+  bind_cols(cls = cls, dd = dd) %>%
+    pivot_longer(-cls) ->
+    data_cls_long
+
+  data_cls_long %>%
+    group_by(name) %>%
+    summarise(median = median(value), mean = mean(value)) %>%
+    right_join(data_cls_long, by = c("name")) -> data_cls_long
+
+  data_cls_long %>%
+    left_join(df, by = c('name' = colnames(df)[1])) ->
+    data_cls_long
+
+  purrr::map(colnames(df[-1]), function(feature) {
+    data_cls_long %>%
+      mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
+      select(name, feature) %>%
+      distinct() %>%
+      ggplot(aes(x = name, y = eval(parse(text = feature)))) +
+      geom_bar(stat="identity") +
+      ylab(feature) +
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank())
+  }) -> gp_list
+  names(gp_list) <- colnames(df[-1])
+
+  data_cls_long %>%
+    mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
+    ggplot(aes(x = name, y = value, fill = cls)) +
+    geom_boxplot(notch = T) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) -> gp_boxplots
+  gp_list[["boxplots"]] <- gp_boxplots
+
+  ggarrange(plotlist = gp_list,
+            ncol=1,
+            nrow = length(gp_list),
+            align = "v",
+            heights = c(rep(1, length(gp_list)-1), 8),
+            legend = "bottom")
+}
+
+
 #' Create a heatmap of data with predicted outcomes at the top and consensus
 #'
 #' @param se \code{\link{SummarizedExperiment}} container
@@ -232,29 +284,31 @@ construct_feature_heatmaps <- function(cv_trained_summary) {
 #' @return Heatmap object
 heatmap_prediction <- function(se, assay = "data", cls_results, scale = FALSE, ...) {
 
-  top_annot_color <- set_top_annot_colors()
-  top_annot_color[["majority"]] <- top_annot_color[["disease"]]
-  top_annot_color[["cls"]] <- top_annot_color[["disease"]]
-
-  purity_colorRamp <- colorRamp2(c(0.5, 1.0), c("white", "black"))
-  top_annot_color[["purity"]] <- purity_colorRamp
-
-  left_join(
-    colData(se) %>% as.data.frame %>% select(sample_uid, site, disease),
-    cls_results[["consensus"]] %>% select(ID, cls, majority, purity),
-    by = c("sample_uid" = "ID")
-  ) %>%
-    mutate(ord =  purity * (2*(as.integer(cls)-1)-1)) ->
+  cls_results[["consensus"]] %>%
+    select(ID, cls, majority, purity) %>%
+    mutate(ord =  purity * (2*(as.integer(cls)-1)-1)) %>%
+    as.data.frame ->
     annot_col_df
-  rownames(annot_col_df) <- annot_col_df$sample_uid
+  rownames(annot_col_df) <- annot_col_df$ID
+
+  n_cls <- length(levels(annot_col_df$cls))
+  cls_color <- brewer.pal(ifelse(n_cls < 3, 3, n_cls), "Set1")[1:n_cls]
+  names(cls_color) <- levels(annot_col_df$cls)
+
+  top_annot_color <-
+    list(
+      cls = cls_color,
+      majority = cls_color,
+      purity = colorRamp2(c(0.5, 1.0), c("white", "black"))
+    )
 
   dd <- assays(se)[[assay]]
-  dd <- dd[, annot_col_df$sample_uid]
+  dd <- dd[, annot_col_df$ID]
 
   annot_col <-
     HeatmapAnnotation(
-      df = annot_col_df[c("site", "cls", "majority", "purity")],
-      col = top_annot_color[c("site", "cls", "majority", "purity")],
+      df = annot_col_df[c("cls", "majority", "purity")],
+      col = top_annot_color[c("cls", "majority", "purity")],
       which = "column")
 
   if (scale) {

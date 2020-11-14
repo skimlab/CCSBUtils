@@ -114,6 +114,7 @@ filter_features <-
 train_cv_model_glmnet <- function(data_train,
                                   cls_train,
                                   fitControl,
+                                  observation_weights = NULL,
                                   penalty.factor = 1) {
 
   if (length(penalty.factor) == 1)
@@ -125,6 +126,7 @@ train_cv_model_glmnet <- function(data_train,
   glmnet_fit <- glmnet::glmnet(
     x = as.matrix(data_train),
     y = cls_train,
+    weights = observation_weights,
     penalty.factor = penalty.factor,
     family = "binomial"
   )
@@ -141,10 +143,10 @@ train_cv_model_glmnet <- function(data_train,
       x = data_train,
       y = cls_train,
       method = "glmnet",
+      weights = observation_weights,
       penalty.factor = penalty.factor,
       trControl = fitControl,
-      tuneGrid = tuneGrid
-    )
+      tuneGrid = tuneGrid)
   )
 }
 
@@ -192,8 +194,8 @@ cv_loop_train_iter <-
            filter_threshold_score,
            filter_threshold_diff,
            filter_direction,
-           feature_uniform,
-           feature_weighted) {
+           observation_weights,
+           feature_weights) {
 
     aModel <- list()
 
@@ -203,6 +205,11 @@ cv_loop_train_iter <-
       data_train <- data[train_index, ]
       cls_train <- cls[train_index]
 
+      if (!is.null(observation_weights)) {
+        observation_weights_train <- observation_weights[train_index]
+      } else {
+        observation_weights_train <- observation_weights
+      }
 
       # Filtering-based feature selection, candidates for the wrapper-based feature selection
       if (toupper(filter_method) == "WILCOX") {
@@ -247,34 +254,26 @@ cv_loop_train_iter <-
       filter_threshold_diff = filter_threshold_diff,
       filter_threshold_score = filter_threshold_score,
       filter_direction = filter_direction,
-      models = list()
+      observation_weights = observation_weights_train,
+      feature_weights = feature_weights
     )
 
-    if (feature_weighted) {
+    if (feature_weights == "weighted") {
       penalty.factor <- (1 - filtered_features$score)
-
-      fit_cv <- train_cv_model_glmnet(data_train_with_filtered_features,
-                                      cls_train,
-                                      fitControl,
-                                      penalty.factor = penalty.factor)
-      selected_features <- get_selected_features(fit_cv, filtered_features)
-
-      aModel$models[["weighted"]] <-
-        list(fit = fit_cv,
-             selected_features = selected_features)
+    } else {
+      penalty.factor <- 1
     }
 
-    if (feature_uniform) {
-      fit_cv <- train_cv_model_glmnet(data_train_with_filtered_features,
-                                      cls_train,
-                                      fitControl,
-                                      penalty.factor = 1)
-      selected_features <- get_selected_features(fit_cv, filtered_features)
 
-      aModel$models[["uniform"]] <-
-        list(fit = fit_cv,
-             selected_features = selected_features)
-    }
+    fit_cv <- train_cv_model_glmnet(data_train_with_filtered_features,
+                                    cls_train,
+                                    fitControl,
+                                    observation_weights = observation_weights_train,
+                                    penalty.factor = penalty.factor)
+    selected_features <- get_selected_features(fit_cv, filtered_features)
+
+    aModel[["fit"]] <- fit_cv
+    aModel[["selected_features"]] <- selected_features
 
     aModel
   }
@@ -293,6 +292,7 @@ cv_loop_train_iter <-
 #' @param filter_threshold_score ...
 #' @param filter_threshold_diff ...
 #' @param filter_direction ...
+#' @param observation_weights ...
 #' @param feature_weights ...
 cv_loop_train <- function(data,
                           cls,
@@ -304,24 +304,15 @@ cv_loop_train <- function(data,
                           filter_direction = "less",
                           filter_threshold_diff = 1,
                           filter_threshold_score = 0.8,
-                          feature_weights = c("uniform", "weighted", "both")) {
+                          observation_weights = NULL,
+                          feature_weights = c("uniform", "weighted")) {
 
-  k <- pmatch(feature_weights, c("uniform", "weighted", "both"))
+  k <- pmatch(feature_weights, c("uniform", "weighted"))
   if (is.na(k)) {
-    stop("feature_weights should be one of 'uniform', 'weighted', 'both'.")
+    stop("feature_weights should be either 'uniform' or 'weighted'.")
   }
 
-  if (k == 1) {
-    feature_uniform = TRUE
-    feature_weighted = FALSE
-  } else if (k == 2) {
-    feature_uniform = FALSE
-    feature_weighted = TRUE
-  } else {
-    feature_uniform = TRUE
-    feature_weighted = TRUE
-  }
-
+  feature_weights <- feature_weights[k]
 
   cv_model_list <-
     purrr::map(
@@ -336,8 +327,8 @@ cv_loop_train <- function(data,
       filter_direction = filter_direction,
       filter_threshold_diff = filter_threshold_diff,
       filter_threshold_score = filter_threshold_score,
-      feature_uniform = feature_uniform,
-      feature_weighted = feature_weighted
+      observation_weights = observation_weights,
+      feature_weights = feature_weights
     )
 
   list(data = data, class = cls, models = cv_model_list)
@@ -357,6 +348,7 @@ cv_loop_train <- function(data,
 #' @param filter_threshold_score ...
 #' @param filter_threshold_diff ...
 #' @param filter_direction ...
+#' @param observation_weights ...
 #' @param feature_weights ...
 cv_loop_train_parallel <-
   function(data,
@@ -369,24 +361,16 @@ cv_loop_train_parallel <-
            filter_direction = "less",
            filter_threshold_diff = 1,
            filter_threshold_score = 0.8,
-           feature_weights = c("uniform", "weighted", "both")) {
+           observation_weights = NULL,
+           feature_weights = c("uniform", "weighted")
+           ) {
 
-    k <- pmatch(feature_weights, c("uniform", "weighted", "both"))
+    k <- pmatch(feature_weights, c("uniform", "weighted"))
     if (is.na(k)) {
-      stop("feature_weights should be one of 'uniform', 'weighted', 'both'.")
+      stop("feature_weights should be either 'uniform' or 'weighted'.")
     }
 
-    if (k == 1) {
-      feature_uniform = TRUE
-      feature_weighted = FALSE
-    } else if (k == 2) {
-      feature_uniform = FALSE
-      feature_weighted = TRUE
-    } else {
-      feature_uniform = TRUE
-      feature_weighted = TRUE
-    }
-
+    feature_weights <- feature_weights[k]
 
     cv_model_list <-
       future.apply::future_lapply(
@@ -401,8 +385,8 @@ cv_loop_train_parallel <-
         filter_direction = filter_direction,
         filter_threshold_diff = filter_threshold_diff,
         filter_threshold_score = filter_threshold_score,
-        feature_uniform = feature_uniform,
-        feature_weighted = feature_weighted,
+        observation_weights = observation_weights,
+        feature_weights = feature_weights,
         future.seed = TRUE
       )
 
