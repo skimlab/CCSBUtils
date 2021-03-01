@@ -2,7 +2,7 @@
 % Please edit documentation in R/classifier_train.R
 \name{cv_loop_train_parallel}
 \alias{cv_loop_train_parallel}
-\title{iterate training a model with CV, using \code{\link{future.apply}}}
+\title{iterates training a model with CV (parallel version), using \code{\link{future.apply}}}
 \usage{
 cv_loop_train_parallel(
   data,
@@ -11,11 +11,12 @@ cv_loop_train_parallel(
   K = 25,
   resampling_rate = 0.8,
   n_features = NA,
-  filter_method = c("two.sided", "greater", "less"),
-  filter_direction = "less",
+  filter_method = c("ROC", "WILCOX"),
+  filter_direction = c("two.sided", "greater", "less"),
   filter_threshold_diff = 1,
   filter_threshold_score = 0.8,
-  feature_weights = c("uniform", "weighted", "both")
+  observation_weights = NULL,
+  feature_weights = c("uniform", "weighted")
 )
 }
 \arguments{
@@ -39,8 +40,13 @@ with \code{\link{glmnet}}}
 
 \item{filter_threshold_score}{...}
 
+\item{observation_weights}{...}
+
 \item{feature_weights}{...}
 }
+\value{
+a list of trained models -- see \code{\link{CCSBUtil::cv_loop_train_iter}}
+}
 \description{
-iterate training a model with CV, using \code{\link{future.apply}}
+iterates training a model with CV (parallel version), using \code{\link{future.apply}}
 }

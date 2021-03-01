@@ -1,105 +1,3 @@
-#' Construct feature maps
-#'
-#' @param models a list of models each of which is an output of \code{\link{cv_loop_train_iter}}
-#' @return a list ("uniform" and/or "weighted") of feature map which is made of
-#'         * columns of filtered features, amended by \code{overall_score}
-#'         * predictors (selected by model), amended by \code{overall_score, overall_feature_score}
-#'         * model coefficients, amended by \code{overall_score, overall_score_mad, overall_score2, overall_feature_score}
-construct_feature_maps <- function(models) {
-  nn <- names(models[[1]]$models)
-
-  feature_maps <- list()
-  for (n in nn) {
-
-    # features (filtered)
-    lapply(models, function(m) m$models[[n]]$selected_features) %>%
-      bind_rows(.id = "id") %>%
-      select(id, feature, score) %>%
-      pivot_wider(names_from = "id",
-                  values_from = "score",
-                  values_fill = 0) %>%
-      data.frame -> feature_map
-
-    # predictors (selected by model)
-    lapply(models, function(m) m$models[[n]]$selected_features) %>%
-      bind_rows(.id = "id") %>%
-      select(id, feature, predictor) %>%
-      pivot_wider(names_from = "id",
-                  values_from = "predictor",
-                  values_fill = 0) %>%
-      data.frame -> predictor_map
-
-    # model coefficients
-    lapply(models, function(m) {
-      coef(m$models[[n]]$fit$finalModel,
-           s = m$models[[n]]$fit$bestTune$lambda) %>% as.matrix %>% as.data.frame -> x
-      colnames(x)[1] <- "coef"
-      x[["feature"]] <- rownames(x)
-      rownames(x) <- NULL
-      x
-    }) %>%
-      bind_rows(.id = "id") %>%
-      #      filter(feature != "(Intercept)") %>%
-      select(id, feature, coef) %>%
-      pivot_wider(names_from = "id",
-                  values_from = "coef",
-                  values_fill = 0) %>%
-      data.frame -> coef_map
-
-    rownames(feature_map) <- feature_map$feature
-    rownames(predictor_map) <- predictor_map$feature
-
-    # set aside "(Intercept)"
-    coef_intercept <- filter(coef_map, feature == "(Intercept)")
-    coef_map <- filter(coef_map, feature != "(Intercept)")
-
-    # remove those features never selected
-    rx <- rowSums(predictor_map[-1])
-    predictor_map <- predictor_map[rx > 0, ]
-
-    rx <- rowSums(abs(coef_map[-1]))
-    coef_map <- coef_map[rx > 0, ]
-
-    # feature scores (overall), from individual scores
-    feature_map[["overall_score"]] <- rowMeans(select(feature_map, starts_with("X")))
-
-    # predictor score = # of times selected in a model
-    predictor_map[["overall_score"]] <- rowSums(select(predictor_map, starts_with("X")))
-    f2p_mapping <- match(predictor_map$feature, feature_map$feature)
-    predictor_map[["overall_feature_score"]] <- feature_map[["overall_score"]][f2p_mapping]
-
-    # overall contribution positive or negative.
-    coef_map[["overall_score"]] <- rowMeans(sign(select(coef_map, starts_with("X"))))
-    coef_map[["overall_score_mad"]] <- rowMads(as.matrix(select(coef_map, starts_with("X"))))
-    coef_map[["overall_score2"]] <- coef_map[["overall_score_mad"]]/coef_map[["overall_score"]]
-    f2p_mapping <- match(coef_map$feature, feature_map$feature)
-    coef_map[["overall_feature_score"]] <- feature_map[["overall_score"]][f2p_mapping]
-
-
-    feature_map %>%
-      arrange(-overall_score) %>%
-      select(feature, overall_score, starts_with("X")) ->
-      feature_map
-
-    predictor_map %>%
-      arrange(-overall_score) %>%
-      select(feature, overall_score, overall_feature_score, starts_with("X")) ->
-      predictor_map
-
-    coef_map %>%
-      arrange(-overall_score) %>%
-      select(feature, starts_with("overall_score"), overall_feature_score, starts_with("X")) ->
-      coef_map
-
-    feature_maps[[n]] <- list(feature_map = feature_map,
-                              predictor_map = predictor_map,
-                              coef_map = coef_map,
-                              coef_intercept = coef_intercept)
-  }
-
-  feature_maps
-}
-
 #' An internal function to construct heatmaps from feature maps
 #'
 #' @param cv_trained_summary An intermediate struct that contains \code{feature_maps}
@@ -140,83 +38,80 @@ construct_feature_heatmaps <- function(cv_trained_summary) {
   }
 
   feature_maps <- cv_trained_summary[["feature_maps"]]
-  nn <- names(feature_maps)
-  for (n in nn) {
-    feature_rowAnnot <-
-      rowAnnotation(feature = feature_maps[[n]]$feature_map$overall_score,
-                    col = list(feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
-    predictor_rowAnnot <-
-      rowAnnotation(predictor = anno_barplot(feature_maps[[n]]$predictor_map$overall_score),
-                    feature = feature_maps[[n]]$predictor_map$overall_feature_score,
-                    col = list(predictor = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
-                               feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
-    coef_rowAnnot <-
-      rowAnnotation(coef = anno_barplot(feature_maps[[n]]$coef_map[["overall_score"]],
-                                        axis_param = list(side = "top")),
-                    coef_mad = anno_barplot(feature_maps[[n]]$coef_map[["overall_score_mad"]],
-                                            axis_param = list(side = "top")),
-                    feature = feature_maps[[n]]$coef_map[["overall_feature_score"]],
-                    miRNA = anno_text(feature_maps[[n]]$coef_map$feature),
-                    col = list(coef = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
-                               coef2 = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
-                               feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
 
-    cv_trained_summary[["accuracy"]] %>%
-      filter(feature_weight == "uniform", type == "test") %>%
-      select(accuracy) -> acc
+  feature_rowAnnot <-
+    rowAnnotation(feature = feature_maps$feature_map$overall_score,
+                  col = list(feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
+  predictor_rowAnnot <-
+    rowAnnotation(predictor = anno_barplot(feature_maps$predictor_map$overall_score),
+                  feature = feature_maps$predictor_map$overall_feature_score,
+                  col = list(predictor = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
+                             feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
+  coef_rowAnnot <-
+    rowAnnotation(coef = anno_barplot(feature_maps$coef_map[["overall_score"]],
+                                      axis_param = list(side = "top")),
+                  coef_mad = anno_barplot(feature_maps$coef_map[["overall_score_mad"]],
+                                          axis_param = list(side = "top")),
+                  feature = feature_maps$coef_map[["overall_feature_score"]],
+                  miRNA = anno_text(feature_maps$coef_map$feature),
+                  col = list(coef = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
+                             coef2 = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkgreen")),
+                             feature = circlize::colorRamp2(breaks = c(0,1), colors = c("white", "darkred"))))
 
-    feature_colAnnot <-
-      HeatmapAnnotation(n_features = anno_barplot(colSums(select(feature_maps[[n]]$feature_map, starts_with("X")) > 0),
+  cv_trained_summary[["accuracy"]] %>%
+    filter(feature_weight == "uniform", type == "test") %>%
+    select(accuracy) -> acc
+
+  feature_colAnnot <-
+    HeatmapAnnotation(n_features = anno_barplot(colSums(select(feature_maps$feature_map, starts_with("X")) > 0),
+                                                axis_param = list(side = "left")))
+  predictor_colAnnot <-
+    HeatmapAnnotation(accuracy = anno_barplot(acc, col = "blue"),
+                      n_predictors = anno_barplot(colSums(select(feature_maps$predictor_map, starts_with("X")) > 0),
                                                   axis_param = list(side = "left")))
-    predictor_colAnnot <-
-      HeatmapAnnotation(accuracy = anno_barplot(acc, col = "blue"),
-                        n_predictors = anno_barplot(colSums(select(feature_maps[[n]]$predictor_map, starts_with("X")) > 0),
-                                                    axis_param = list(side = "left")))
 
-    feature_maps[[n]][["feature_heatmap"]] <-
-      feature_heatmap(
-        select(feature_maps[[n]]$feature_map, starts_with("X")),
-        right_annotation = feature_rowAnnot,
-        top_annotation = feature_colAnnot,
-        row_order = order(-feature_maps[[n]]$feature_map$overall_score)
-      )
+  feature_maps[["feature_heatmap"]] <-
+    feature_heatmap(
+      select(feature_maps$feature_map, starts_with("X")),
+      right_annotation = feature_rowAnnot,
+      top_annotation = feature_colAnnot,
+      row_order = order(-feature_maps$feature_map$overall_score)
+    )
 
-    feature_maps[[n]][["predictor_heatmap"]] <-
-      feature_heatmap(
-        select(feature_maps[[n]]$predictor_map, starts_with("X")),
-        right_annotation = predictor_rowAnnot,
-        top_annotation = predictor_colAnnot,
-        row_order = order(-feature_maps[[n]]$predictor_map$overall_score)
-      )
+  feature_maps[["predictor_heatmap"]] <-
+    feature_heatmap(
+      select(feature_maps$predictor_map, starts_with("X")),
+      right_annotation = predictor_rowAnnot,
+      top_annotation = predictor_colAnnot,
+      row_order = order(-feature_maps$predictor_map$overall_score)
+    )
 
-    feature_maps[[n]][["coef_heatmap"]] <-
-      coef_heatmap(
-        sign(select(feature_maps[[n]]$coef_map, starts_with("X"))),
-        right_annotation = coef_rowAnnot,
-        top_annotation = predictor_colAnnot,
-        row_order = order(-feature_maps[[n]]$coef_map$overall_score)
-      )
+  feature_maps[["coef_heatmap"]] <-
+    coef_heatmap(
+      sign(select(feature_maps$coef_map, starts_with("X"))),
+      right_annotation = coef_rowAnnot,
+      top_annotation = predictor_colAnnot,
+      row_order = order(-feature_maps$coef_map$overall_score)
+    )
 
-    feature_maps[[n]][["predictor_heatmap2"]] <-
-      feature_pheatmap(
-        select(feature_maps[[n]]$coef_map, starts_with("X")),
-        right_annotation = predictor_rowAnnot,
-        top_annotation = predictor_colAnnot,
-        row_order = order(-feature_maps[[n]]$predictor_map$overall_score)
-      )
+  feature_maps[["predictor_heatmap2"]] <-
+    feature_pheatmap(
+      select(feature_maps$coef_map, starts_with("X")),
+      right_annotation = predictor_rowAnnot,
+      top_annotation = predictor_colAnnot,
+      row_order = order(-feature_maps$predictor_map$overall_score)
+    )
 
-    # this heatmap requires a bit more work
-    x <- select(feature_maps[[n]]$coef_map, starts_with("X"))
-    x <- t(scale(t(x), center = F, scale = apply(abs(x), 1, function(ax) max(ax)*0.75)))
-    feature_maps[[n]][["coef_heatmap2"]] <-
-      coef_heatmap(
-        x,
-        right_annotation = coef_rowAnnot,
-        top_annotation = predictor_colAnnot,
-        row_order = order(-feature_maps[[n]]$coef_map$overall_score)
-      )
-
-  }
+  # this heatmap requires a bit more work
+  x <- select(feature_maps$coef_map, starts_with("X"))
+  x <- t(scale(t(x), center = F, scale = apply(abs(x), 1, function(ax) max(ax)*0.75)))
+  feature_maps[["coef_heatmap2"]] <-
+    coef_heatmap(
+      x,
+      right_annotation = coef_rowAnnot,
+      top_annotation = predictor_colAnnot,
+      row_order = order(-feature_maps$coef_map$overall_score)
+    )
 
   cv_trained_summary[["feature_maps"]] <- feature_maps
   cv_trained_summary
@@ -231,24 +126,24 @@ construct_feature_heatmaps <- function(cv_trained_summary) {
 #' @param df fold difference, computed by \code{compute_difference}
 #' @param order.by which feature to order boxplots, typically `mean` or `diff`
 feature_boxplots <- function(dd, cls, df = data.frame(), order.by = "") {
-  bind_cols(cls = cls, dd = dd) %>%
-    pivot_longer(-cls) ->
+  dplyr::bind_cols(cls = cls, dd = data.frame(dd, check.names = F)) %>%
+    tidyr::pivot_longer(-cls) ->
     data_cls_long
 
   data_cls_long %>%
-    group_by(name) %>%
-    summarise(median = median(value), mean = mean(value)) %>%
-    right_join(data_cls_long, by = c("name")) -> data_cls_long
+    dplyr::group_by(name) %>%
+    dplyr::summarise(median = median(value), mean = mean(value)) %>%
+    dplyr::right_join(data_cls_long, by = c("name")) -> data_cls_long
 
   data_cls_long %>%
-    left_join(df, by = c('name' = colnames(df)[1])) ->
+    dplyr::left_join(df, by = c('name' = colnames(df)[1])) ->
     data_cls_long
 
   purrr::map(colnames(df[-1]), function(feature) {
     data_cls_long %>%
-      mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
-      select(name, feature) %>%
-      distinct() %>%
+      dplyr::mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
+      dplyr::select(name, feature) %>%
+      dplyr::distinct() %>%
       ggplot(aes(x = name, y = eval(parse(text = feature)))) +
       geom_bar(stat="identity") +
       ylab(feature) +
@@ -259,7 +154,7 @@ feature_boxplots <- function(dd, cls, df = data.frame(), order.by = "") {
   names(gp_list) <- colnames(df[-1])
 
   data_cls_long %>%
-    mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
+    dplyr::mutate(name = fct_reorder(name, eval(parse(text=order.by)))) %>%
     ggplot(aes(x = name, y = value, fill = cls)) +
     geom_boxplot(notch = T) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) -> gp_boxplots
@@ -315,6 +210,9 @@ heatmap_prediction <- function(se, assay = "data", cls_results, scale = FALSE, .
     dd <- t(scale(t(dd)))
   }
 
+  # making sure column names retained
+  colnames(dd) <- annot_col_df$ID
+
   annot_row <-
     HeatmapAnnotation(
       diff = compute_difference(t(dd), annot_col_df$cls),
@@ -335,40 +233,46 @@ heatmap_prediction <- function(se, assay = "data", cls_results, scale = FALSE, .
 #' @param se \code{\link{SummarizedExperiment}} container
 #' @param assay a name of assay slot in \code{se}
 #' @param cls_results An output of \code{\link{classification_summary_workflow}}
+#' @param cv_model output of caret::train or glmnet::cv_glmnet
 #' @param scale If TRUE, the data (=assays(se)[[assay]]) will be scaled
 #' @param ...  Additional parameters to be passed to \code{\link{Heatmap}}
 #' @return Heatmap object
 heatmap_glmnet <- function(se, assay = "data", cls_results, cv_model, scale = FALSE, ...) {
 
-  top_annot_color <- set_top_annot_colors()
-  top_annot_color[["majority"]] <- top_annot_color[["disease"]]
-  top_annot_color[["cls"]] <- top_annot_color[["disease"]]
+  cls_color <- c("lightgray", "black")
+  names(cls_color) <- unique(cls_results$cv_trained$class)
+
+  top_annot_color <-
+    list(
+      majority = cls_color,
+      cls = cls_color
+    )
 
   purity_colorRamp <- colorRamp2(c(0.5, 1.0), c("white", "black"))
   top_annot_color[["purity"]] <- purity_colorRamp
 
-  left_join(
-    colData(se) %>% as.data.frame %>% select(sample_uid, site),
-    cls_results[["consensus"]] %>% select(ID, cls, majority, purity),
-    by = c("sample_uid" = "ID")
-  ) %>%
-    mutate(ord =  purity * (2*(as.integer(cls)-1)-1)) ->
-    annot_col_df
-  rownames(annot_col_df) <- annot_col_df$sample_uid
 
-  dd <- assays(se)[[assay]]
-  dd <- dd[, annot_col_df$sample_uid]
+  cls_results[["consensus"]] %>% dplyr::select(ID, cls, majority, purity) %>%
+    mutate(ord =  purity * (2*(as.integer(cls)-1)-1)) %>%
+    as.data.frame ->
+    annot_top_df
+  # rownames(annot_top_df) <- annot_top_df$sample_uid
+  rownames(annot_top_df) <- annot_top_df$ID
 
-  annot_col <-
+
+  annot_top <-
     HeatmapAnnotation(
-      df = annot_col_df[c("site", "cls", "majority", "purity")],
-      col = top_annot_color[c("site", "cls", "majority", "purity")],
+      df = annot_top_df[c("cls", "majority", "purity")],
+      col = top_annot_color[c("cls", "majority", "purity")],
       which = "column")
 
   which.beta <- which(cv_model$finalModel$lambda == cv_model$finalModel$lambdaOpt)
 
   bb <- cv_model$finalModel$beta[, which.beta]
   a0 <- cv_model$finalModel$a0[which.beta]
+
+  dd <- assays(se)[[assay]]
+  dd <- dd[names(bb), annot_top_df$ID]
 
   prob <- predict(cv_model, t(dd), type = "prob")
   prob <- prob[[2]]
@@ -381,17 +285,52 @@ heatmap_glmnet <- function(se, assay = "data", cls_results, cv_model, scale = FA
   annot_right <-
     rowAnnotation(coef = bb, col = list(coef = colorRamp2(c(-max(abs(bb)), 0, max(abs(bb))), c("blue", "white", "red"))))
 
-  dx <- dd*bb
+  dx <- dd*bb + a0
   if (scale) {
     dx <- t(scale(t(dx)))
   }
 
   ComplexHeatmap::Heatmap(dx,
                           name = "projected",
-                          top_annotation = annot_col,
+                          top_annotation = annot_top,
                           bottom_annotation = annot_bottom,
                           right_annotation = annot_right,
                           column_split = ifelse(colSums(dd*bb)+a0 > 0, 'pos', 'neg'),
-                          column_order = order(colSums(dd*bb)),
+                          column_order = order(prob),
                           row_order = order(bb), ...)
 }
+
+
+#' Create line plots to show train trajectories
+#'
+#' @param cv_model an output of caret::train or glmnet::cv_glmnet
+#' @return \code{\link{ggplot2}} object
+ggplot_train_trajectory <- function(cv_model) {
+  dplyr::left_join(cv_model$results,
+            data.frame(cv_model$finalModel[c("lambda", "df")]),
+            by = "lambda") %>%
+    tidyr::pivot_longer(c("Accuracy", "df")) %>%
+    ggplot2::ggplot(aes(x = lambda, y = value)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_point() +
+    ggplot2::xlab("Regularization parameter") +
+    ggplot2::ylab("") +
+    ggplot2::facet_grid(name~., scales = "free")
+}
+
+#' Create a heatmap of correlation between features (rows)
+#'
+#' @param dd data (row: feature, column: observation)
+#' @param importance a vector of `importance` values of features
+#' @return \code{\link{ComplexHeatmap}} object
+heatmap_features_cor <- function(dd, importance, ...) {
+  dd %>% t %>% cor %>%
+    ComplexHeatmap::Heatmap(
+      right_annotation = ComplexHeatmap::rowAnnotation(importance = ComplexHeatmap::anno_barplot(importance,
+                                                                                                 axis_param = list(side = "top"))),
+      name = "correlation",
+      col = circlize::colorRamp2(c(-1, 0, 1), c("blue", "yellow", "red")),
+      ...
+    )
+}
+

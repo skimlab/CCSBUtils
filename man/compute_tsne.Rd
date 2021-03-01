@@ -4,7 +4,7 @@
 \alias{compute_tsne}
 \title{A function to perform *t-SNE* projection of data}
 \usage{
-compute_tsne(se, assay = "data")
+compute_tsne(se, assay = "data", num_threads = 1)
 }
 \arguments{
 \item{se}{A \code{\link{SummarizedExperiment}} object}

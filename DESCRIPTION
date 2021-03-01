@@ -26,5 +26,7 @@ Imports:
     future.apply,
     ComplexHeatmap,
     circlize,
-    pROC
+    pROC,
+    RColorBrewer,
+    ggpubr
 RoxygenNote: 7.1.1

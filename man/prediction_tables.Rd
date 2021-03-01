@@ -4,7 +4,7 @@
 \alias{prediction_tables}
 \title{predict outcomes of observations in data using *selected features*}
 \usage{
-prediction_tables(data, cls, models)
+prediction_tables(data, cls, model)
 }
 \arguments{
 \item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.

@@ -39,7 +39,7 @@ filter_features_AUC <-
                      diff = compute_difference(dd, cls),
                      score = res[[1]])
 
-  dir <- pmatch(direction, c("two.sided", "greater", "less"))[1]
+  dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
 
   if (dir == 1) {
     res <- dplyr::arrange(res, -score) %>% dplyr::filter(score > threshold)
@@ -76,6 +76,7 @@ mult_wilcox_test <- function(dd, cls, ...) {
 #' @param cls A set of classes, either in \code{factor}
 #' @param threshold A minimum value of (1 - p.value of Wilcox test) for filtering
 #' @param direction Direction of AUC statistical test: "two.sided", "greater" or "less"
+#' @return A table where each row is a filtered feature with stats and scores
 filter_features <-
   function(dd,
            cls,
@@ -88,7 +89,7 @@ filter_features <-
                           diff = compute_difference(dd, cls),
                           score = 1 - res$p.value)
 
-  dir <- pmatch(direction, c("two.sided", "greater", "less"))[1]
+  dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
 
   if (dir == 1) {
     res <- dplyr::arrange(res, -score) %>% dplyr::filter(score > threshold)
@@ -111,6 +112,7 @@ filter_features <-
 #' @param cls_train class labels
 #' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
 #' @param penalty.factor Separate penalty factors can be applied to each coefficient.  See \code{\link{glmnet::glmnet}} for detail
+#' @return A list returned from \code{caret::train}
 train_cv_model_glmnet <- function(data_train,
                                   cls_train,
                                   fitControl,
@@ -155,7 +157,7 @@ train_cv_model_glmnet <- function(data_train,
 #'
 #' @param fit ...
 #' @param features ...
-#'
+#' @return A table where each feature (row) is marked 1 if it is a selected feature, 0 otherwise.
 get_selected_features <- function(fit, features) {
   selected_predictors <-
     tibble::tibble(feature = caret::predictors(fit),
@@ -167,7 +169,7 @@ get_selected_features <- function(fit, features) {
 }
 
 
-#' A function train a model with CV
+#' A function to train a model with CV
 #'
 #' @param ii integer (probably not needed)
 #' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
@@ -183,6 +185,7 @@ get_selected_features <- function(fit, features) {
 #' @param filter_direction ...
 #' @param feature_uniform ...
 #' @param feature_weighted ...
+#' @return a trained model - a list of training parameters (see above), fitted model, and selected features
 cv_loop_train_iter <-
   function(ii,
            data,
@@ -199,7 +202,8 @@ cv_loop_train_iter <-
 
     aModel <- list()
 
-    repeat {
+    maxTried = 20
+    for (nTried in 0:maxTried) {
       train_index <- caret::createDataPartition(cls, p = resampling_rate, list = FALSE, times = 1)
 
       data_train <- data[train_index, ]
@@ -243,14 +247,17 @@ cv_loop_train_iter <-
       if (nrow(filtered_features) > 0)
         break
     }
+    if (nrow(filtered_features) == 0) {
+      stop("Something wrong... no feature after filtering...")
+    }
 
     # we will need data with only selected features
-    data_train_with_filtered_features <- dplyr::select(data_train, filtered_features$feature)
+    data_train_with_filtered_features <- data_train[, filtered_features$feature]
 
     aModel <- list(
       train_index = train_index,
       train_samples = rownames(data_train_with_filtered_features),
-      filter_method = filter_method,
+      filter_method = filter_method[1],
       filter_threshold_diff = filter_threshold_diff,
       filter_threshold_score = filter_threshold_score,
       filter_direction = filter_direction,
@@ -279,7 +286,9 @@ cv_loop_train_iter <-
   }
 
 
-#' iterate training a model with CV
+
+
+#' iterates training a model with CV (serial version)
 #'
 #' @param data input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
 #'             Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
@@ -294,14 +303,15 @@ cv_loop_train_iter <-
 #' @param filter_direction ...
 #' @param observation_weights ...
 #' @param feature_weights ...
+#' @return a list of trained models -- see \code{\link{cv_loop_train_iter}}
 cv_loop_train <- function(data,
                           cls,
                           fitControl,
                           K = 25,
                           resampling_rate = 0.8,
                           n_features = NA,
-                          filter_method = c("two.sided", "greater", "less"),
-                          filter_direction = "less",
+                          filter_method = c("ROC", "WILCOX"),
+                          filter_direction = c("two.sided", "greater", "less"),
                           filter_threshold_diff = 1,
                           filter_threshold_score = 0.8,
                           observation_weights = NULL,
@@ -323,19 +333,19 @@ cv_loop_train <- function(data,
       fitControl = fitControl,
       resampling_rate = resampling_rate,
       n_features = n_features,
-      filter_method = filter_method,
-      filter_direction = filter_direction,
+      filter_method = filter_method[1],
+      filter_direction = filter_direction[1],
       filter_threshold_diff = filter_threshold_diff,
       filter_threshold_score = filter_threshold_score,
       observation_weights = observation_weights,
-      feature_weights = feature_weights
+      feature_weights = feature_weights[1]
     )
 
   list(data = data, class = cls, models = cv_model_list)
 }
 
 
-#' iterate training a model with CV, using \code{\link{future.apply}}
+#' iterates training a model with CV (parallel version), using \code{\link{future.apply}}
 #'
 #' @param data input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
 #'             Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
@@ -350,6 +360,7 @@ cv_loop_train <- function(data,
 #' @param filter_direction ...
 #' @param observation_weights ...
 #' @param feature_weights ...
+#' @return a list of trained models -- see \code{\link{CCSBUtil::cv_loop_train_iter}}
 cv_loop_train_parallel <-
   function(data,
            cls,
@@ -357,8 +368,8 @@ cv_loop_train_parallel <-
            K = 25,
            resampling_rate = 0.8,
            n_features = NA,
-           filter_method = c("two.sided", "greater", "less"),
-           filter_direction = "less",
+           filter_method = c("ROC", "WILCOX"),
+           filter_direction = c("two.sided", "greater", "less"),
            filter_threshold_diff = 1,
            filter_threshold_score = 0.8,
            observation_weights = NULL,
@@ -381,12 +392,12 @@ cv_loop_train_parallel <-
         fitControl = fitControl,
         resampling_rate = resampling_rate,
         n_features = n_features,
-        filter_method = filter_method,
-        filter_direction = filter_direction,
+        filter_method = filter_method[1],
+        filter_direction = filter_direction[1],
         filter_threshold_diff = filter_threshold_diff,
         filter_threshold_score = filter_threshold_score,
         observation_weights = observation_weights,
-        feature_weights = feature_weights,
+        feature_weights = feature_weights[1],
         future.seed = TRUE
       )
 
@@ -394,4 +405,241 @@ cv_loop_train_parallel <-
   }
 
 
+#' A function to train a *final* model with CV
+#'
+#' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
+#'             Since this is an input to \code{glmnet}, it should be the format that can be used
+#'             with \code{glmnet}
+#' @param cls class labels
+#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
+#' @param filter_method ... c("ROC", "WILCOX")
+#' @param filter_direction ... c("two.sided", "greater", "less")
+#' @param observation_weights ...
+#' @param feature_weights ... c("uniform", "weighted")
+#' @return a trained model (final) - a list of training parameters (see above), fitted model, and selected features
+cv_train_final <- function(data,
+                           cls,
+                           fitControl,
+                           filter_method = c("ROC", "WILCOX"),
+                           filter_direction = c("two.sided", "greater", "less"),
+                           observation_weights = NULL,
+                           feature_weights = c("uniform", "weighted")) {
+  aModel <- list()
 
+  filter_method <- filter_method[1]
+  filter_direction <- filter_direction[1]
+  feature_weights <- feature_weights[1]
+
+  # Filtering-based feature selection, candidates for the wrapper-based feature selection
+  if (toupper(filter_method) == "WILCOX") {
+    filtered_features <-
+      filter_features(
+        dd = data,
+        cls = cls,
+        threshold = 0,
+        direction = filter_direction
+      )
+  } else if (toupper(filter_method) == "ROC") {
+    filtered_features <-
+      filter_features_AUC(
+        dd = as.data.frame(data),  # this should work w/o as.data.frame. should check it out later.
+        cls = cls,
+        threshold = 0,
+        direction = filter_direction
+      )
+  } else {
+    stop("'filter_method' should be either 'ROC' or 'wilcox'.")
+  }
+
+  filtered_features <-
+    dplyr::filter(filtered_features, abs(diff) > 0)
+
+  aModel <- list(
+    train_index = 1:nrow(data),
+    train_samples = rownames(data),
+    filter_method = filter_method[1],
+    filter_threshold_diff = NA,
+    filter_threshold_score = NA,
+    filter_direction = filter_direction[1],
+    observation_weights = observation_weights,
+    feature_weights = feature_weights
+  )
+
+  if (feature_weights == "weighted") {
+    penalty.factor <- (1 - filtered_features$score)
+  } else {
+    penalty.factor <- 1
+  }
+
+  # making sure the features are in the right order
+  data <- data[, filtered_features$feature]
+  fit_cv <- train_cv_model_glmnet(data,
+                                  cls,
+                                  fitControl,
+                                  observation_weights = observation_weights,
+                                  penalty.factor = penalty.factor)
+
+  selected_features <-
+    get_selected_features(fit_cv, filtered_features)
+
+  aModel[["fit"]] <- fit_cv
+  aModel[["selected_features"]] <- selected_features
+
+  aModel
+}
+
+
+#' A function that combines
+#'   cv_loop_train and cv_train_final
+#'
+#' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
+#'             Since this is an input to \code{glmnet}, it should be the format that can be used
+#'             with \code{glmnet}
+#' @param cls class labels
+#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
+#' @param K ...
+#' @param resampling_rate ...
+#' @param n_features ...
+#' @param filter_method ...
+#' @param filter_threshold_score ...
+#' @param filter_threshold_diff ...
+#' @param filter_direction ...
+#' @param observation_weights ...
+#' @param feature_weights ...
+#' @param predictor_score_threshold ...
+#' @return a list of \code{cv_loop_trained} (see \code{\link{cv_loop_train_iter}}),
+#' \code{classification_results} (see \code{\link{classification_summary_workflow}}), and
+#' \code{final_cv_model} (see \code{\link{cv_train_final}} and additional slots)
+train_to_final_model <-
+  function(data,
+           cls,
+           fitControl,
+           K = 25,
+           resampling_rate = 0.8,
+           n_features = NA,
+           filter_method = c("ROC", "WILCOX"),
+           filter_direction = c("two.sided", "greater", "less"),
+           filter_threshold_diff = 1,
+           filter_threshold_score = 0.8,
+           observation_weights = NULL,
+           feature_weights = c("uniform", "weighted"),
+           predictor_score_threshold = 0.1) {
+    cv_loop_trained <-
+      cv_loop_train_parallel(
+        data = data,
+        cls = cls,
+        fitControl = fitControl,
+        K = K,
+        resampling_rate = resampling_rate,
+        filter_method = filter_method,
+        filter_direction = filter_direction,
+        filter_threshold_diff = filter_threshold_diff,
+        filter_threshold_score = filter_threshold_score,
+        n_features = n_features,
+        feature_weights = feature_weights
+      )
+
+    cv_loop_trained %>%
+      classification_summary_workflow() ->
+      classification_results
+
+    cv_loop_trained %>%
+      prediction_consensus_summary() ->
+      classification_results[["consensus"]]
+
+    classification_results$feature_maps$coef_map %>%
+      filter(abs(overall_score) > predictor_score_threshold) %>%
+      `[[`("feature") ->
+      features_selected
+
+    features_df <-
+      enframe(
+        compute_difference(
+          classification_results$cv_trained$data[, features_selected],
+          classification_results$cv_trained$class
+        )
+      ) %>%
+      dplyr::rename(diff = value)
+
+    classification_results[["feature_boxplots"]] <-
+      feature_boxplots(
+        dd = classification_results$cv_trained$data[, features_selected],
+        cls = classification_results$cv_trained$class,
+        df = features_df,
+        order.by = "diff"
+      )
+
+    final_data <- data[features_selected]
+    final_cls <- cls
+
+    final_cv_model <-
+      cv_train_final(
+        data = final_data,
+        cls = final_cls,
+        fitControl = fitControl,
+        filter_method = filter_method
+      )
+
+    final_cv_model[["summary"]] <-
+      data.frame(
+        sample = rownames(final_cv_model$fit$trainingData),
+        prob = predict(final_cv_model$fit, type = "prob"),
+        pred = predict(final_cv_model$fit),
+        cls = final_cv_model$fit$trainingData$.outcome
+      ) %>%
+      mutate(correct = cls == pred) %>%
+      arrange(-correct)
+
+    final_features_selected <- predictors(final_cv_model$fit)
+
+    final_features_df <-
+      left_join(enframe(compute_difference(final_data[, final_features_selected],
+                                           final_cls)),
+                as_tibble(varImp(final_cv_model$fit)[[1]],
+                          rownames = 'name'),
+                by = 'name') %>%
+      dplyr::rename(diff = value,
+                    imp = Overall)
+
+    final_cv_model[["candidate_features"]] <- features_selected
+    final_cv_model[["final_features"]] <- final_features_selected
+
+    final_cv_model[["summary"]] %>%
+      select(starts_with("prob.")) %>%
+      colnames ->
+      cls.probs
+
+    final_cv_model[["plots"]] <-
+      list(
+        final_train_trajectory = ggplot_train_trajectory(final_cv_model$fit),
+        final_prediction_probability = final_cv_model[["summary"]] %>%
+          ggplot(aes(
+            x = reorder(sample, eval(parse(text = cls.probs[1]))),
+            y = eval(parse(text = cls.probs[1])),
+            color = cls
+          )) +
+          geom_point() +
+          ylab(cls.probs[1]) +
+          xlab("samples") +
+          geom_hline(
+            yintercept = 0.5,
+            linetype = "dashed",
+            color = "red"
+          ) +
+          theme(axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()),
+        final_features_importance = ggplot(varImp(final_cv_model$fit)),
+        final_features_boxplots = feature_boxplots(
+          dd = final_data[, final_features_selected],
+          cls = final_cls,
+          df = final_features_df,
+          order.by = "diff"
+        )
+      )
+
+    list(
+      cv_loop_trained = cv_loop_trained,
+      classification_results = classification_results,
+      final_cv_model = final_cv_model
+    )
+  }

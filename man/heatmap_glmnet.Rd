@@ -13,6 +13,8 @@ heatmap_glmnet(se, assay = "data", cls_results, cv_model, scale = FALSE, ...)
 
 \item{cls_results}{An output of \code{\link{classification_summary_workflow}}}
 
+\item{cv_model}{output of caret::train or glmnet::cv_glmnet}
+
 \item{scale}{If TRUE, the data (=assays(se)[[assay]]) will be scaled}
 
 \item{...}{Additional parameters to be passed to \code{\link{Heatmap}}}

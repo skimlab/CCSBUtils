@@ -21,6 +21,9 @@ where each row is an observation}
 
 \item{direction}{Direction of AUC statistical test: "two.sided", "greater" or "less"}
 }
+\value{
+A table where each row is a filtered feature with stats and scores
+}
 \description{
 A function for filtering-based feature selection, using Wilcox test as a metric
 }

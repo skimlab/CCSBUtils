@@ -2,7 +2,7 @@
 % Please edit documentation in R/classifier_train.R
 \name{cv_loop_train_iter}
 \alias{cv_loop_train_iter}
-\title{A function train a model with CV}
+\title{A function to train a model with CV}
 \usage{
 cv_loop_train_iter(
   ii,
@@ -15,8 +15,8 @@ cv_loop_train_iter(
   filter_threshold_score,
   filter_threshold_diff,
   filter_direction,
-  feature_uniform,
-  feature_weighted
+  observation_weights,
+  feature_weights
 )
 }
 \arguments{
@@ -46,6 +46,9 @@ with \code{glmnet}}
 
 \item{feature_weighted}{...}
 }
+\value{
+a trained model - a list of training parameters (see above), fitted model, and selected features
+}
 \description{
-A function train a model with CV
+A function to train a model with CV
 }

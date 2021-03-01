@@ -4,7 +4,7 @@
 \alias{extract_metrics}
 \title{Extract performance metrics from \code{performance_summary} slot}
 \usage{
-extract_metrics(p.summary, slot = 1)
+extract_metrics(p.summary)
 }
 \arguments{
 \item{p.summary}{Either "train" or "test" slot of an output of \code{\link{models_performance_summary}}}

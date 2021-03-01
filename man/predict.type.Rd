@@ -16,7 +16,7 @@ with \code{\link{glmnet}}}
 \item{type}{'raw' (default) or 'prob'}
 }
 \value{
-Either outputs class labels ('raw) or
+a named vector, either outputs class labels ('raw) or
         probability tables, a column for each class label ('prob')
 }
 \description{
