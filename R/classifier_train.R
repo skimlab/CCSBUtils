@@ -247,6 +247,7 @@ cv_loop_train_iter <-
       if (nrow(filtered_features) > 0)
         break
     }
+
     if (nrow(filtered_features) == 0) {
       stop("Something wrong... no feature after filtering...")
     }
@@ -513,6 +514,8 @@ cv_train_final <- function(data,
 train_to_final_model <-
   function(data,
            cls,
+           train_final = TRUE,
+           train_consensus = TRUE,
            fitControl,
            K = 25,
            resampling_rate = 0.8,
@@ -524,118 +527,131 @@ train_to_final_model <-
            observation_weights = NULL,
            feature_weights = c("uniform", "weighted"),
            predictor_score_threshold = 0.1) {
-    cv_loop_trained <-
-      cv_loop_train_parallel(
-        data = data,
-        cls = cls,
-        fitControl = fitControl,
-        K = K,
-        resampling_rate = resampling_rate,
-        filter_method = filter_method,
-        filter_direction = filter_direction,
-        filter_threshold_diff = filter_threshold_diff,
-        filter_threshold_score = filter_threshold_score,
-        n_features = n_features,
-        feature_weights = feature_weights
-      )
-
-    cv_loop_trained %>%
-      classification_summary_workflow() ->
-      classification_results
-
-    cv_loop_trained %>%
-      prediction_consensus_summary() ->
-      classification_results[["consensus"]]
-
-    classification_results$feature_maps$coef_map %>%
-      filter(abs(overall_score) > predictor_score_threshold) %>%
-      `[[`("feature") ->
-      features_selected
-
-    features_df <-
-      enframe(
-        compute_difference(
-          classification_results$cv_trained$data[, features_selected],
-          classification_results$cv_trained$class
+    if (train_consensus) {
+      #
+      # cv_loop training to get consensus model
+      #
+      cv_loop_trained <-
+        cv_loop_train_parallel(
+          data = data,
+          cls = cls,
+          fitControl = fitControl,
+          K = K,
+          resampling_rate = resampling_rate,
+          filter_method = filter_method,
+          filter_direction = filter_direction,
+          filter_threshold_diff = filter_threshold_diff,
+          filter_threshold_score = filter_threshold_score,
+          n_features = n_features,
+          feature_weights = feature_weights
         )
-      ) %>%
-      dplyr::rename(diff = value)
 
-    classification_results[["feature_boxplots"]] <-
-      feature_boxplots(
-        dd = classification_results$cv_trained$data[, features_selected],
-        cls = classification_results$cv_trained$class,
-        df = features_df,
-        order.by = "diff"
-      )
+      cv_loop_trained %>%
+        classification_summary_workflow() ->
+        classification_results
 
-    final_data <- data[features_selected]
-    final_cls <- cls
+      cv_loop_trained %>%
+        prediction_consensus_summary() ->
+        classification_results[["consensus"]]
 
-    final_cv_model <-
-      cv_train_final(
-        data = final_data,
-        cls = final_cls,
-        fitControl = fitControl,
-        filter_method = filter_method
-      )
+      classification_results$feature_maps$coef_map %>%
+        filter(abs(overall_score) > predictor_score_threshold) %>%
+        `[[`("feature") ->
+        features_selected
 
-    final_cv_model[["summary"]] <-
-      data.frame(
-        sample = rownames(final_cv_model$fit$trainingData),
-        prob = predict(final_cv_model$fit, type = "prob"),
-        pred = predict(final_cv_model$fit),
-        cls = final_cv_model$fit$trainingData$.outcome
-      ) %>%
-      mutate(correct = cls == pred) %>%
-      arrange(-correct)
+      features_df <-
+        enframe(
+          compute_difference(
+            classification_results$cv_trained$data[, features_selected],
+            classification_results$cv_trained$class
+          )
+        ) %>%
+        dplyr::rename(diff = value)
 
-    final_features_selected <- predictors(final_cv_model$fit)
-
-    final_features_df <-
-      left_join(enframe(compute_difference(final_data[, final_features_selected],
-                                           final_cls)),
-                as_tibble(varImp(final_cv_model$fit)[[1]],
-                          rownames = 'name'),
-                by = 'name') %>%
-      dplyr::rename(diff = value,
-                    imp = Overall)
-
-    final_cv_model[["candidate_features"]] <- features_selected
-    final_cv_model[["final_features"]] <- final_features_selected
-
-    final_cv_model[["summary"]] %>%
-      select(starts_with("prob.")) %>%
-      colnames ->
-      cls.probs
-
-    final_cv_model[["plots"]] <-
-      list(
-        final_train_trajectory = ggplot_train_trajectory(final_cv_model$fit),
-        final_prediction_probability = final_cv_model[["summary"]] %>%
-          ggplot(aes(
-            x = reorder(sample, eval(parse(text = cls.probs[1]))),
-            y = eval(parse(text = cls.probs[1])),
-            color = cls
-          )) +
-          geom_point() +
-          ylab(cls.probs[1]) +
-          xlab("samples") +
-          geom_hline(
-            yintercept = 0.5,
-            linetype = "dashed",
-            color = "red"
-          ) +
-          theme(axis.text.x = element_blank(),
-                axis.ticks.x = element_blank()),
-        final_features_importance = ggplot(varImp(final_cv_model$fit)),
-        final_features_boxplots = feature_boxplots(
-          dd = final_data[, final_features_selected],
-          cls = final_cls,
-          df = final_features_df,
+      classification_results[["feature_boxplots"]] <-
+        feature_boxplots(
+          dd = classification_results$cv_trained$data[, features_selected],
+          cls = classification_results$cv_trained$class,
+          df = features_df,
           order.by = "diff"
         )
-      )
+    } else {
+      cv_loop_trained <- NA
+      classification_results <- NA
+      features_selected <- rownames(data)  # use all features
+    }
+
+    if (train_final) {
+      final_data <- data[features_selected]
+      final_cls <- cls
+
+      final_cv_model <-
+        cv_train_final(
+          data = final_data,
+          cls = final_cls,
+          fitControl = fitControl,
+          filter_method = filter_method
+        )
+
+      final_cv_model[["summary"]] <-
+        data.frame(
+          sample = rownames(final_cv_model$fit$trainingData),
+          prob = predict(final_cv_model$fit, type = "prob"),
+          pred = predict(final_cv_model$fit),
+          cls = final_cv_model$fit$trainingData$.outcome
+        ) %>%
+        mutate(correct = cls == pred) %>%
+        arrange(-correct)
+
+      final_features_selected <- predictors(final_cv_model$fit)
+
+      final_features_df <-
+        left_join(enframe(compute_difference(final_data[, final_features_selected],
+                                             final_cls)),
+                  as_tibble(varImp(final_cv_model$fit)[[1]],
+                            rownames = 'name'),
+                  by = 'name') %>%
+        dplyr::rename(diff = value,
+                      imp = Overall)
+
+      final_cv_model[["candidate_features"]] <- features_selected
+      final_cv_model[["final_features"]] <- final_features_selected
+
+      final_cv_model[["summary"]] %>%
+        select(starts_with("prob.")) %>%
+        colnames ->
+        cls.probs
+
+      final_cv_model[["plots"]] <-
+        list(
+          final_train_trajectory = ggplot_train_trajectory(final_cv_model$fit),
+          final_prediction_probability = final_cv_model[["summary"]] %>%
+            ggplot(aes(
+              x = reorder(sample, eval(parse(text = cls.probs[1]))),
+              y = eval(parse(text = cls.probs[1])),
+              color = cls
+            )) +
+            geom_point() +
+            ylab(cls.probs[1]) +
+            xlab("samples") +
+            geom_hline(
+              yintercept = 0.5,
+              linetype = "dashed",
+              color = "red"
+            ) +
+            theme(axis.text.x = element_blank(),
+                  axis.ticks.x = element_blank()),
+          final_features_importance = ggplot(varImp(final_cv_model$fit)),
+          final_features_boxplots = feature_boxplots(
+            dd = final_data[, final_features_selected],
+            cls = final_cls,
+            df = final_features_df,
+            order.by = "diff"
+          )
+        )
+    } else {
+      final_cv_model <- NA
+    }
 
     list(
       cv_loop_trained = cv_loop_trained,
