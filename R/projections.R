@@ -61,12 +61,12 @@ plot_projection <- function(se, reduction = "umap", feature_color = NA, feature_
       projection_df <- cbind(projection_df, feature_color = se[[feature_color]], feature_shape = se[[feature_shape]])
       gp <-
         ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y,
-                                                    color = feature_color, shape = feature_shape, label = name))
+                                                    color = feature_color, shape = feature_shape, label = name.xy))
     } else {
       projection_df <- cbind(projection_df, feature_color = se[[feature_color]])
       gp <-
         ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y,
-                                                    color = feature_color, label = name))
+                                                    color = feature_color, label = name.xy))
     }
   } else {
     gp <-

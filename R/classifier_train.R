@@ -83,7 +83,7 @@ filter_features <-
            threshold = 0.8,
            direction = c("two.sided", "greater", "less")
   ) {
-  res <- mult_wilcox_test(t(dd), as.numeric(cls)-1, alternative = direction[1])
+  res <- mult_wilcox_test(t(dd), as.numeric(cls) - min(as.numeric(cls)), alternative = direction[1])
   res <- dplyr::bind_cols(tibble::tibble(feature = rownames(res)),
                           res,
                           diff = compute_difference(dd, cls),
@@ -202,7 +202,9 @@ cv_loop_train_iter <-
 
     aModel <- list()
 
-    maxTried = 20
+    maxTried = 5  # it was 20 initially, but reduced for computation and
+                  #     because it won't make sense anyway if you don't get
+                  #     enough filtered features within a few trials.
     for (nTried in 0:maxTried) {
       train_index <- caret::createDataPartition(cls, p = resampling_rate, list = FALSE, times = 1)
 
@@ -243,13 +245,13 @@ cv_loop_train_iter <-
           filtered_features
       }
 
-      # somehow, the number of selected_features is 0, we need to repeat the step above.
-      if (nrow(filtered_features) > 0)
+      # somehow, the number of selected_features is less than 2, we need to repeat the step above.
+      if (nrow(filtered_features) > 1)
         break
     }
 
-    if (nrow(filtered_features) == 0) {
-      stop("Something wrong... no feature after filtering...")
+    if (nrow(filtered_features) < 2) {
+      stop("# of filtered_features is less than 2; try to loosen the filtering criteria...")
     }
 
     # we will need data with only selected features
