@@ -48,13 +48,13 @@ compute_pca <- function(se, assay = "data") {
 #' @export
 plot_projection <- function(se, reduction = "umap", feature_color = NA, feature_shape = NA) {
   reduction <- S4Vectors::metadata(se)[[reduction]]
-  projection_df <- data.frame(name = rownames(SummarizedExperiment::colData(se)),
+  projection_df <- data.frame(name.xy = rownames(SummarizedExperiment::colData(se)),
                               x = reduction[[1]],
                               y = reduction[[2]])
   # to keep all other column data and make them available
   projection_df <- cbind(
     projection_df,
-    colData(se)
+    data.frame(colData(se))
   )
   if (!is.na(feature_color)) {
     if (!is.na(feature_shape)) {
@@ -70,7 +70,7 @@ plot_projection <- function(se, reduction = "umap", feature_color = NA, feature_
     }
   } else {
     gp <-
-      ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y, label = name))
+      ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y, label = name.xy))
   }
 
   gp +
