@@ -528,7 +528,9 @@ train_to_final_model <-
            filter_threshold_score = 0.8,
            observation_weights = NULL,
            feature_weights = c("uniform", "weighted"),
-           predictor_score_threshold = 0.1) {
+           predictor_score_threshold = 0.1,
+           verbose = FALSE) {
+
     if (train_consensus) {
       #
       # cv_loop training to get consensus model
@@ -581,6 +583,10 @@ train_to_final_model <-
       cv_loop_trained <- NA
       classification_results <- NA
       features_selected <- rownames(data)  # use all features
+    }
+
+    if (verbose) {
+      print("Consensus model complete ...")
     }
 
     if (train_final) {
@@ -653,6 +659,10 @@ train_to_final_model <-
         )
     } else {
       final_cv_model <- NA
+    }
+
+    if (verbose) {
+      print("Final model complete ...")
     }
 
     list(
