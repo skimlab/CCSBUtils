@@ -530,7 +530,6 @@ train_to_final_model <-
            feature_weights = c("uniform", "weighted"),
            predictor_score_threshold = 0.1,
            verbose = FALSE) {
-
     if (train_consensus) {
       #
       # cv_loop training to get consensus model
@@ -549,6 +548,10 @@ train_to_final_model <-
           n_features = n_features,
           feature_weights = feature_weights
         )
+
+      if (verbose) {
+        print("cv_loop_train_parallel complete ...")
+      }
 
       cv_loop_trained %>%
         classification_summary_workflow() ->
@@ -579,6 +582,11 @@ train_to_final_model <-
           df = features_df,
           order.by = "diff"
         )
+
+      if (verbose) {
+        print("classification_summary_workflow complete ...")
+      }
+
     } else {
       cv_loop_trained <- NA
       classification_results <- NA

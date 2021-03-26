@@ -73,9 +73,16 @@ plot_projection <- function(se, reduction = "umap", feature_color = NA, feature_
       ggplot2::ggplot(projection_df, ggplot2::aes(x = x, y = y, label = name.xy))
   }
 
+
+  # gp +
+  #   ggplot2::geom_point() +
+  #   ggplot2::xlab(colnames(reduction)[1]) +
+  #   ggplot2::ylab(colnames(reduction)[2]) +
+  #   ggplot2::guides(color=ggplot2::guide_legend(title=feature_color))
+  #
   gp +
     ggplot2::geom_point() +
     ggplot2::xlab(colnames(reduction)[1]) +
     ggplot2::ylab(colnames(reduction)[2]) +
-    ggplot2::guides(color=ggplot2::guide_legend(title=feature_color))
+    ggplot2::labs(color = feature_color, shape = feature_shape)
 }

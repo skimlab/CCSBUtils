@@ -8,6 +8,8 @@
 train_to_final_model(
   data,
   cls,
+  train_final = TRUE,
+  train_consensus = TRUE,
   fitControl,
   K = 25,
   resampling_rate = 0.8,
@@ -18,7 +20,8 @@ train_to_final_model(
   filter_threshold_score = 0.8,
   observation_weights = NULL,
   feature_weights = c("uniform", "weighted"),
-  predictor_score_threshold = 0.1
+  predictor_score_threshold = 0.1,
+  verbose = FALSE
 )
 }
 \arguments{
