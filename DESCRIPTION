@@ -10,6 +10,7 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports: 
+Depends:
     SummarizedExperiment,
     ggplot2,
     stats,
@@ -17,16 +18,16 @@ Imports:
     uwot,
     S4Vectors,
     dplyr,
-    caret,
     tibble,
     glmnet,
     magrittr,
-    utils,
-    purrr,
-    future.apply,
     ComplexHeatmap,
     circlize,
-    pROC,
     RColorBrewer,
     ggpubr
+    caret,
+    future.apply,
+    utils,
+    purrr,
+    pROC
 RoxygenNote: 7.1.1
