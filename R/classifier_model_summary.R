@@ -576,7 +576,7 @@ construct_feature_maps <- function(models) {
   # features (filtered)
   lapply(models, function(m) m$selected_features) %>%
     bind_rows(.id = "id") %>%
-    select(id, feature, score) %>%
+    dplyr::select(id, feature, score) %>%
     pivot_wider(names_from = "id",
                 values_from = "score",
                 values_fill = 0) %>%
@@ -585,7 +585,7 @@ construct_feature_maps <- function(models) {
   # predictors (selected by model)
   lapply(models, function(m) m$selected_features) %>%
     bind_rows(.id = "id") %>%
-    select(id, feature, predictor) %>%
+    dplyr::select(id, feature, predictor) %>%
     pivot_wider(names_from = "id",
                 values_from = "predictor",
                 values_fill = 0) %>%
@@ -602,7 +602,7 @@ construct_feature_maps <- function(models) {
   }) %>%
     bind_rows(.id = "id") %>%
     #      filter(feature != "(Intercept)") %>%
-    select(id, feature, coef) %>%
+    dplyr::select(id, feature, coef) %>%
     pivot_wider(names_from = "id",
                 values_from = "coef",
                 values_fill = 0) %>%
@@ -623,34 +623,51 @@ construct_feature_maps <- function(models) {
   coef_map <- coef_map[rx > 0, ]
 
   # feature scores (overall), from individual scores
-  feature_map[["overall_score"]] <- rowMeans(select(feature_map, starts_with("X")))
+  feature_map[["overall_score"]] <-
+    feature_map %>%
+    dplyr::select(starts_with("X")) %>%
+    rowMeans()
 
   # predictor score = # of times selected in a model
-  predictor_map[["overall_score"]] <- rowSums(select(predictor_map, starts_with("X")))
+  predictor_map[["overall_score"]] <-
+    predictor_map %>%
+    dplyr::select(starts_with("X")) %>%
+    rowSums()
+
   f2p_mapping <- match(predictor_map$feature, feature_map$feature)
   predictor_map[["overall_feature_score"]] <- feature_map[["overall_score"]][f2p_mapping]
 
   # overall contribution positive or negative.
-  coef_map[["overall_score"]] <- rowMeans(sign(select(coef_map, starts_with("X"))))
-  coef_map[["overall_score_mad"]] <- rowMads(as.matrix(select(coef_map, starts_with("X"))))
+  coef_map[["overall_score"]] <-
+    coef_map %>%
+    dplyr::select(starts_with("X")) %>%
+    sign () %>% rowMeans()
+
+  coef_map[["overall_score_mad"]] <-
+    coef_map %>%
+    dplyr::select(starts_with("X")) %>%
+    as.matrix() %>% rowMads()
+
   coef_map[["overall_score2"]] <- coef_map[["overall_score_mad"]]/coef_map[["overall_score"]]
+
   f2p_mapping <- match(coef_map$feature, feature_map$feature)
+
   coef_map[["overall_feature_score"]] <- feature_map[["overall_score"]][f2p_mapping]
 
 
   feature_map %>%
     arrange(-overall_score) %>%
-    select(feature, overall_score, starts_with("X")) ->
+    dplyr::select(feature, overall_score, starts_with("X")) ->
     feature_map
 
   predictor_map %>%
     arrange(-overall_score) %>%
-    select(feature, overall_score, overall_feature_score, starts_with("X")) ->
+    dplyr::select(feature, overall_score, overall_feature_score, starts_with("X")) ->
     predictor_map
 
   coef_map %>%
     arrange(-overall_score) %>%
-    select(feature, starts_with("overall_score"), overall_feature_score, starts_with("X")) ->
+    dplyr::select(feature, starts_with("overall_score"), overall_feature_score, starts_with("X")) ->
     coef_map
 
   list(feature_map = feature_map,

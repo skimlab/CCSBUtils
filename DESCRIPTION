@@ -9,25 +9,29 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Imports: 
 Depends:
+    ComplexHeatmap,
+    circlize,
+    RColorBrewer,
+    caret,
+    future.apply,
+    utils,
+    ggpubr,
+    pROC
+Imports:
     SummarizedExperiment,
-    ggplot2,
+    tidyverse,
     stats,
     Rtsne,
     uwot,
     S4Vectors,
-    dplyr,
-    tibble,
     glmnet,
-    magrittr,
     ComplexHeatmap,
     circlize,
     RColorBrewer,
-    ggpubr
+    ggpubr,
     caret,
     future.apply,
     utils,
-    purrr,
     pROC
 RoxygenNote: 7.1.1

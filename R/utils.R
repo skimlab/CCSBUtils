@@ -21,7 +21,13 @@ split_se <- function(se, col) {
 #' @noRd
 subset_metadata <- function(se, idx) {
   mse <- metadata(se)
-  res <- lapply(mse, function(df) df[idx, ])
+  res <- lapply(mse,
+                function(df) {
+                  if ("data.frame" %in% class(df))
+                    df[idx,]
+                  else
+                    df
+                })
   names(res) <- names(mse)
   res
 }

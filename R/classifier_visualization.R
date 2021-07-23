@@ -94,13 +94,13 @@ construct_feature_heatmaps <- function(cv_trained_summary) {
       row_order = order(-feature_maps$coef_map$overall_score)
     )
 
-  feature_maps[["predictor_heatmap2"]] <-
-    feature_pheatmap(
-      select(feature_maps$coef_map, starts_with("X")),
-      right_annotation = predictor_rowAnnot,
-      top_annotation = predictor_colAnnot,
-      row_order = order(-feature_maps$predictor_map$overall_score)
-    )
+  # feature_maps[["predictor_heatmap2"]] <-
+  #   feature_pheatmap(
+  #     select(feature_maps$coef_map, starts_with("X")),
+  #     right_annotation = predictor_rowAnnot,
+  #     top_annotation = predictor_colAnnot,
+  #     row_order = order(-feature_maps$predictor_map$overall_score)
+  #   )
 
   # this heatmap requires a bit more work
   x <- select(feature_maps$coef_map, starts_with("X"))
