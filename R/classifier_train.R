@@ -634,7 +634,7 @@ train_to_final_model <-
       final_cv_model[["final_features"]] <- final_features_selected
 
       final_cv_model[["summary"]] %>%
-        select(starts_with("prob.")) %>%
+        dplyr::select(starts_with("prob.")) %>%
         colnames ->
         cls.probs
 
