@@ -7,8 +7,8 @@
 construct_feature_heatmaps(cv_trained_summary)
 }
 \arguments{
-\item{cv_trained_summary}{An intermediate struct that contains \code{feature_maps}
-and \code{accuracy} slots}
+\item{cv_trained_summary}{An intermediate struct that contains
+\code{feature_maps} and \code{accuracy} slots}
 }
 \description{
 An internal function to construct heatmaps from feature maps

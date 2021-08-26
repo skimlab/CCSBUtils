@@ -9,11 +9,14 @@ plot_projection(se, reduction = "umap", feature_color = NA, feature_shape = NA)
 \arguments{
 \item{se}{A \code{\link{SummarizedExperiment}} object}
 
-\item{reduction}{A name of the slot data where projection is is stored: 'umap', 'tsne' or 'pca'}
+\item{reduction}{A name of the slot data where projection is is stored:
+'umap', 'tsne' or 'pca'}
 
-\item{feature_color}{If specified, the projection will be color-coded using the specified feature from \code{colData(se)}}
+\item{feature_color}{If specified, the projection will be color-coded using
+the specified feature from \code{colData(se)}}
 
-\item{feature_shape}{If specified, the projection will be shape-coded using the specified feature from \code{colData(se)}}
+\item{feature_shape}{If specified, the projection will be shape-coded using
+the specified feature from \code{colData(se)}}
 }
 \value{
 A \code{\link{ggplot}} object

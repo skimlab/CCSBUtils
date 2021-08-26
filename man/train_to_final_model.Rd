@@ -2,8 +2,7 @@
 % Please edit documentation in R/classifier_train.R
 \name{train_to_final_model}
 \alias{train_to_final_model}
-\title{A function that combines
-  cv_loop_train and cv_train_final}
+\title{A function that combines cv_loop_train and cv_train_final}
 \usage{
 train_to_final_model(
   data,
@@ -25,13 +24,14 @@ train_to_final_model(
 )
 }
 \arguments{
-\item{data}{input matrix, of dimension nobs x nvars; each row is an observation vector.
-Since this is an input to \code{glmnet}, it should be the format that can be used
-with \code{glmnet}}
+\item{data}{input matrix, of dimension nobs x nvars; each row is an
+observation vector. Since this is an input to \code{glmnet}, it should be
+the format that can be used with \code{glmnet}}
 
 \item{cls}{class labels}
 
-\item{fitControl}{A list of training parameters.  See \code{\link{caret::trainControl}} for detail}
+\item{fitControl}{A list of training parameters.  See
+\code{\link{caret::trainControl}} for detail}
 
 \item{K}{...}
 
@@ -54,11 +54,11 @@ with \code{glmnet}}
 \item{predictor_score_threshold}{...}
 }
 \value{
-a list of \code{cv_loop_trained} (see \code{\link{cv_loop_train_iter}}),
-\code{classification_results} (see \code{\link{classification_summary_workflow}}), and
-\code{final_cv_model} (see \code{\link{cv_train_final}} and additional slots)
+a list of \code{cv_loop_trained} (see
+  \code{\link{cv_loop_train_iter}}), \code{classification_results} (see
+  \code{\link{classification_summary_workflow}}), and \code{final_cv_model}
+  (see \code{\link{cv_train_final}} and additional slots)
 }
 \description{
-A function that combines
-  cv_loop_train and cv_train_final
+A function that combines cv_loop_train and cv_train_final
 }

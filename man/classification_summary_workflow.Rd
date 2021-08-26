@@ -7,7 +7,8 @@
 classification_summary_workflow(cv_trained, show_feature_map = FALSE)
 }
 \arguments{
-\item{cv_trained}{An output of \code{\link{cv_loop_train}} or \code{\link{cv_loop_train_parallel}}}
+\item{cv_trained}{An output of \code{\link{cv_loop_train}} or
+\code{\link{cv_loop_train_parallel}}}
 }
 \value{
 A list of classification performance summary

@@ -12,7 +12,8 @@ compute_pca(se, assay = "data")
 \item{assay}{A name of the slot data is stored}
 }
 \value{
-A \code{\link{SummarizedExperiment}} object with *PCA* projection stored in \code{metadata(se[[pca]]} slot
+A \code{\link{SummarizedExperiment}} object with *PCA* projection
+  stored in \code{metadata(se[[pca]]} slot
 }
 \description{
 A function to perform *PCA* projection of data

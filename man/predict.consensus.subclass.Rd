@@ -14,16 +14,17 @@ i.e. outcome of a \code{predict...} function}
 
 \item{subclassify}{a class to subclassify}
 
-\item{submodel}{a list of models, which is an outcome of \code{\link{cv_loop_train}}}
+\item{submodel}{a list of models, which is an outcome of
+\code{\link{cv_loop_train}}}
 
-\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-with \code{\link{glmnet}}}
+\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an
+observation vector. Since this is an input to \code{\link{glmnet}}, it
+should be the format that can be used with \code{\link{glmnet}}}
 }
 \value{
 amended predicted table with subclass labels
 }
 \description{
-returns a table where each rows is predicted outcomes of a sample,
-     by applying a predictive model
+returns a table where each rows is predicted outcomes of a sample, by
+applying a predictive model
 }

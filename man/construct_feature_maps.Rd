@@ -7,16 +7,20 @@
 construct_feature_maps(models)
 }
 \arguments{
-\item{models}{a list of models each of which is an output of \code{\link{cv_loop_train_iter}}}
+\item{models}{a list of models each of which is an output of
+\code{\link{cv_loop_train_iter}}}
 
-\item{p.summary}{Either "train" or "test" slot of an output of \code{\link{models_performance_summary}}
+\item{p.summary}{Either "train" or "test" slot of an output of
+  \code{\link{models_performance_summary}}
 Construct feature maps}
 }
 \value{
 a list ("uniform" and/or "weighted") of feature map which is made of
-        * columns of filtered features, amended by \code{overall_score}
-        * predictors (selected by model), amended by \code{overall_score, overall_feature_score}
-        * model coefficients, amended by \code{overall_score, overall_score_mad, overall_score2, overall_feature_score}
+  * columns of filtered features, amended by \code{overall_score} *
+  predictors (selected by model), amended by \code{overall_score,
+  overall_feature_score} * model coefficients, amended by
+  \code{overall_score, overall_score_mad, overall_score2,
+  overall_feature_score}
 }
 \description{
 Extract all performance metrics

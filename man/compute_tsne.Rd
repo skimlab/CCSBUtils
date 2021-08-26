@@ -12,7 +12,8 @@ compute_tsne(se, assay = "data", num_threads = 1)
 \item{assay}{A name of the slot data is stored}
 }
 \value{
-A \code{\link{SummarizedExperiment}} object with *t-SNE* projection stored in \code{metadata(se[[tsne]]} slot
+A \code{\link{SummarizedExperiment}} object with *t-SNE* projection
+  stored in \code{metadata(se[[tsne]]} slot
 }
 \description{
 A function to perform *t-SNE* projection of data

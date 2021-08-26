@@ -7,17 +7,19 @@
 \method{predict}{consensus}(models, data)
 }
 \arguments{
-\item{models}{a list of models which is an outcome of \code{\link{cv_loop_train_iter}} or
-\code{\link{cv_train_final}}, a model trained for a class}
+\item{models}{a list of models which is an outcome of
+\code{\link{cv_loop_train_iter}} or \code{\link{cv_train_final}}, a model
+trained for a class}
 
-\item{dd}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-with \code{\link{glmnet}}}
+\item{dd}{input matrix, of dimension \code{nobs x nvars}; each row is an
+observation vector. Since this is an input to \code{\link{glmnet}}, it
+should be the format that can be used with \code{\link{glmnet}}}
 }
 \value{
-a table where each rows is predicted outcomes of applying predictive models to a sample
+a table where each rows is predicted outcomes of applying predictive
+  models to a sample
 }
 \description{
-returns a table where each rows is predicted outcomes of a sample,
-     by applying predictive models
+returns a table where each rows is predicted outcomes of a sample, by
+applying predictive models
 }

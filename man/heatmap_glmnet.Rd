@@ -2,7 +2,8 @@
 % Please edit documentation in R/classifier_visualization.R
 \name{heatmap_glmnet}
 \alias{heatmap_glmnet}
-\title{Create a heatmap of projected data (coef x data) with predicted outcomes at the top and consensus}
+\title{Create a heatmap of projected data (coef x data) with predicted outcomes at
+the top and consensus}
 \usage{
 heatmap_glmnet(se, assay = "data", cls_results, cv_model, scale = FALSE, ...)
 }
@@ -23,5 +24,6 @@ heatmap_glmnet(se, assay = "data", cls_results, cv_model, scale = FALSE, ...)
 Heatmap object
 }
 \description{
-Create a heatmap of projected data (coef x data) with predicted outcomes at the top and consensus
+Create a heatmap of projected data (coef x data) with predicted outcomes at
+the top and consensus
 }

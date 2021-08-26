@@ -12,8 +12,8 @@ compute_difference <- function(dd, cls) {
     stop("class should be binary...")
   }
 
-  colMeans(dd[cls == lvls[1], ]) -
-    colMeans(dd[cls == lvls[2], ])
+  colMeans(dd[cls == lvls[1],]) -
+    colMeans(dd[cls == lvls[2],])
 }
 
 
@@ -31,26 +31,28 @@ filter_features_AUC <-
   function(dd,
            cls,
            threshold = 0.8,
-           direction = c("two.sided", "greater", "less")
-  ) {
-  res <- caret::filterVarImp(x = dd, y = cls)
-  res <-
-    dplyr::bind_cols(tibble::tibble(feature = rownames(res)),
-                     diff = compute_difference(dd, cls),
-                     score = res[[1]])
+           direction = c("two.sided", "greater", "less")) {
+    res <- caret::filterVarImp(x = dd, y = cls)
+    res <-
+      dplyr::bind_cols(tibble::tibble(feature = rownames(res)),
+                       diff = compute_difference(dd, cls),
+                       score = res[[1]])
 
-  dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
+    dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
 
-  if (dir == 1) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(score > threshold)
-  } else if (dir == 2) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(diff > 0, score > threshold)
-  } else if (dir == 3) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(diff < 0, score > threshold)
+    if (dir == 1) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(score > threshold)
+    } else if (dir == 2) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(diff > 0, score > threshold)
+    } else if (dir == 3) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(diff < 0, score > threshold)
+    }
+
+    res
   }
-
-  res
-}
 
 #' Internal function for multiple Wilcox test
 #'
@@ -63,8 +65,13 @@ filter_features_AUC <-
 mult_wilcox_test <- function(dd, cls, ...) {
   x <- apply(dd, MARGIN = 1,
              function(x)
-               stats::wilcox.test(x[cls==0], x[cls==1], ...))
-  data.frame(p.value = sapply(x, function(xt) xt$p.value), stats = sapply(x, function(xt) xt$statistic))
+               stats::wilcox.test(x[cls == 0], x[cls == 1], ...))
+  data.frame(
+    p.value = sapply(x, function(xt)
+      xt$p.value),
+    stats = sapply(x, function(xt)
+      xt$statistic)
+  )
 }
 
 
@@ -81,44 +88,50 @@ filter_features <-
   function(dd,
            cls,
            threshold = 0.8,
-           direction = c("two.sided", "greater", "less")
-  ) {
-  res <- mult_wilcox_test(t(dd), as.numeric(cls) - min(as.numeric(cls)), alternative = direction[1])
-  res <- dplyr::bind_cols(tibble::tibble(feature = rownames(res)),
-                          res,
-                          diff = compute_difference(dd, cls),
-                          score = 1 - res$p.value)
+           direction = c("two.sided", "greater", "less")) {
+    res <-
+      mult_wilcox_test(t(dd), as.numeric(cls) - min(as.numeric(cls)), alternative = direction[1])
+    res <- dplyr::bind_cols(
+      tibble::tibble(feature = rownames(res)),
+      res,
+      diff = compute_difference(dd, cls),
+      score = 1 - res$p.value
+    )
 
-  dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
+    dir <- pmatch(direction[1], c("two.sided", "greater", "less"))
 
-  if (dir == 1) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(score > threshold)
-  } else if (dir == 2) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(diff > 0, score > threshold)
-  } else if (dir == 3) {
-    res <- dplyr::arrange(res, -score) %>% dplyr::filter(diff < 0, score > threshold)
+    if (dir == 1) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(score > threshold)
+    } else if (dir == 2) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(diff > 0, score > threshold)
+    } else if (dir == 3) {
+      res <-
+        dplyr::arrange(res,-score) %>% dplyr::filter(diff < 0, score > threshold)
+    }
+
+    res
   }
-
-  res
-}
 
 
 
 #' A function train a model with CV
 #'
-#' @param data_train input matrix, of dimension nobs x nvars; each row is an observation vector.
-#'                   Since this is an input to \code{glmnet}, it should be the format that can be used
-#'                   with \code{glmnet}
+#' @param data_train input matrix, of dimension nobs x nvars; each row is an
+#'   observation vector. Since this is an input to \code{glmnet}, it should be
+#'   the format that can be used with \code{glmnet}
 #' @param cls_train class labels
-#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
-#' @param penalty.factor Separate penalty factors can be applied to each coefficient.  See \code{\link{glmnet::glmnet}} for detail
+#' @param fitControl A list of training parameters.  See
+#'   \code{\link{caret::trainControl}} for detail
+#' @param penalty.factor Separate penalty factors can be applied to each
+#'   coefficient.  See \code{\link{glmnet::glmnet}} for detail
 #' @return A list returned from \code{caret::train}
 train_cv_model_glmnet <- function(data_train,
                                   cls_train,
                                   fitControl,
                                   observation_weights = NULL,
                                   penalty.factor = 1) {
-
   if (length(penalty.factor) == 1)
     penalty.factor <- rep(1, ncol(data_train))
 
@@ -148,7 +161,8 @@ train_cv_model_glmnet <- function(data_train,
       weights = observation_weights,
       penalty.factor = penalty.factor,
       trControl = fitControl,
-      tuneGrid = tuneGrid)
+      tuneGrid = tuneGrid
+    )
   )
 }
 
@@ -157,14 +171,15 @@ train_cv_model_glmnet <- function(data_train,
 #'
 #' @param fit ...
 #' @param features ...
-#' @return A table where each feature (row) is marked 1 if it is a selected feature, 0 otherwise.
+#' @return A table where each feature (row) is marked 1 if it is a selected
+#'   feature, 0 otherwise.
 get_selected_features <- function(fit, features) {
   selected_predictors <-
     tibble::tibble(feature = caret::predictors(fit),
                    predictor = 1)
 
   dplyr::left_join(features,
-            selected_predictors, by = "feature") %>%
+                   selected_predictors, by = "feature") %>%
     dplyr::mutate(predictor = ifelse(is.na(predictor), 0, predictor))
 }
 
@@ -172,11 +187,12 @@ get_selected_features <- function(fit, features) {
 #' A function to train a model with CV
 #'
 #' @param ii integer (probably not needed)
-#' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
-#'             Since this is an input to \code{glmnet}, it should be the format that can be used
-#'             with \code{glmnet}
+#' @param data input matrix, of dimension nobs x nvars; each row is an
+#'   observation vector. Since this is an input to \code{glmnet}, it should be
+#'   the format that can be used with \code{glmnet}
 #' @param cls class labels
-#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
+#' @param fitControl A list of training parameters.  See
+#'   \code{\link{caret::trainControl}} for detail
 #' @param resampling_rate ...
 #' @param n_features ...
 #' @param filter_method ...
@@ -185,7 +201,8 @@ get_selected_features <- function(fit, features) {
 #' @param filter_direction ...
 #' @param feature_uniform ...
 #' @param feature_weighted ...
-#' @return a trained model - a list of training parameters (see above), fitted model, and selected features
+#' @return a trained model - a list of training parameters (see above), fitted
+#'   model, and selected features
 cv_loop_train_iter <-
   function(ii,
            data,
@@ -199,16 +216,19 @@ cv_loop_train_iter <-
            filter_direction,
            observation_weights,
            feature_weights) {
-
     aModel <- list()
 
     maxTried = 5  # it was 20 initially, but reduced for computation and
-                  #     because it won't make sense anyway if you don't get
-                  #     enough filtered features within a few trials.
+    #     because it won't make sense anyway if you don't get
+    #     enough filtered features within a few trials.
     for (nTried in 0:maxTried) {
-      train_index <- caret::createDataPartition(cls, p = resampling_rate, list = FALSE, times = 1)
+      train_index <-
+        caret::createDataPartition(cls,
+                                   p = resampling_rate,
+                                   list = FALSE,
+                                   times = 1)
 
-      data_train <- data[train_index, ]
+      data_train <- data[train_index,]
       cls_train <- cls[train_index]
 
       if (!is.null(observation_weights)) {
@@ -220,24 +240,34 @@ cv_loop_train_iter <-
       # Filtering-based feature selection, candidates for the wrapper-based feature selection
       if (toupper(filter_method) == "WILCOX") {
         filtered_features <-
-          filter_features(dd = data_train, cls = cls_train,
-                          threshold = 0, direction = filter_direction)
+          filter_features(
+            dd = data_train,
+            cls = cls_train,
+            threshold = 0,
+            direction = filter_direction
+          )
       } else if (toupper(filter_method) == "ROC") {
         filtered_features <-
-          filter_features_AUC(dd = data_train, cls = cls_train,
-                              threshold = 0, direction = filter_direction)
+          filter_features_AUC(
+            dd = data_train,
+            cls = cls_train,
+            threshold = 0,
+            direction = filter_direction
+          )
       } else {
         stop("'filter_method' should be either 'ROC' or 'wilcox'.")
       }
 
-      filtered_features <- dplyr::filter(filtered_features, abs(diff) > filter_threshold_diff)
+      filtered_features <-
+        dplyr::filter(filtered_features, abs(diff) > filter_threshold_diff)
 
       #
       # if n_features is not pre-defined,
       #   we will need filter_threshold_score to pick a subset of features for the next step
       #
       if (is.na(n_features)) {
-        filtered_features <- dplyr::filter(filtered_features, score > filter_threshold_score)
+        filtered_features <-
+          dplyr::filter(filtered_features, score > filter_threshold_score)
       } else {
         filtered_features %>%
           dplyr::arrange(-score) %>%
@@ -255,7 +285,8 @@ cv_loop_train_iter <-
     }
 
     # we will need data with only selected features
-    data_train_with_filtered_features <- data_train[, filtered_features$feature]
+    data_train_with_filtered_features <-
+      data_train[, filtered_features$feature]
 
     aModel <- list(
       train_index = train_index,
@@ -275,12 +306,16 @@ cv_loop_train_iter <-
     }
 
 
-    fit_cv <- train_cv_model_glmnet(data_train_with_filtered_features,
-                                    cls_train,
-                                    fitControl,
-                                    observation_weights = observation_weights_train,
-                                    penalty.factor = penalty.factor)
-    selected_features <- get_selected_features(fit_cv, filtered_features)
+    fit_cv <-
+      train_cv_model_glmnet(
+        data_train_with_filtered_features,
+        cls_train,
+        fitControl,
+        observation_weights = observation_weights_train,
+        penalty.factor = penalty.factor
+      )
+    selected_features <-
+      get_selected_features(fit_cv, filtered_features)
 
     aModel[["fit"]] <- fit_cv
     aModel[["selected_features"]] <- selected_features
@@ -293,9 +328,9 @@ cv_loop_train_iter <-
 
 #' iterates training a model with CV (serial version)
 #'
-#' @param data input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-#'             Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-#'             with \code{\link{glmnet}}
+#' @param data input matrix, of dimension \code{nobs x nvars}; each row is an
+#'   observation vector. Since this is an input to \code{\link{glmnet}}, it
+#'   should be the format that can be used with \code{\link{glmnet}}
 #' @param cls class labels
 #' @param K ...
 #' @param resampling_rate ...
@@ -319,7 +354,6 @@ cv_loop_train <- function(data,
                           filter_threshold_score = 0.8,
                           observation_weights = NULL,
                           feature_weights = c("uniform", "weighted")) {
-
   k <- pmatch(feature_weights, c("uniform", "weighted"))
   if (is.na(k)) {
     stop("feature_weights should be either 'uniform' or 'weighted'.")
@@ -344,15 +378,18 @@ cv_loop_train <- function(data,
       feature_weights = feature_weights[1]
     )
 
-  list(data = data, class = cls, models = cv_model_list)
+  list(data = data,
+       class = cls,
+       models = cv_model_list)
 }
 
 
-#' iterates training a model with CV (parallel version), using \code{\link{future.apply}}
+#' iterates training a model with CV (parallel version), using
+#' \code{\link{future.apply}}
 #'
-#' @param data input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-#'             Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-#'             with \code{\link{glmnet}}
+#' @param data input matrix, of dimension \code{nobs x nvars}; each row is an
+#'   observation vector. Since this is an input to \code{\link{glmnet}}, it
+#'   should be the format that can be used with \code{\link{glmnet}}
 #' @param cls class labels
 #' @param K ...
 #' @param resampling_rate ...
@@ -363,7 +400,8 @@ cv_loop_train <- function(data,
 #' @param filter_direction ...
 #' @param observation_weights ...
 #' @param feature_weights ...
-#' @return a list of trained models -- see \code{\link{CCSBUtil::cv_loop_train_iter}}
+#' @return a list of trained models -- see
+#'   \code{\link{CCSBUtil::cv_loop_train_iter}}
 cv_loop_train_parallel <-
   function(data,
            cls,
@@ -376,9 +414,7 @@ cv_loop_train_parallel <-
            filter_threshold_diff = 1,
            filter_threshold_score = 0.8,
            observation_weights = NULL,
-           feature_weights = c("uniform", "weighted")
-           ) {
-
+           feature_weights = c("uniform", "weighted")) {
     k <- pmatch(feature_weights, c("uniform", "weighted"))
     if (is.na(k)) {
       stop("feature_weights should be either 'uniform' or 'weighted'.")
@@ -404,22 +440,26 @@ cv_loop_train_parallel <-
         future.seed = TRUE
       )
 
-    list(data = data, class = cls, models = cv_model_list)
+    list(data = data,
+         class = cls,
+         models = cv_model_list)
   }
 
 
 #' A function to train a *final* model with CV
 #'
-#' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
-#'             Since this is an input to \code{glmnet}, it should be the format that can be used
-#'             with \code{glmnet}
+#' @param data input matrix, of dimension nobs x nvars; each row is an
+#'   observation vector. Since this is an input to \code{glmnet}, it should be
+#'   the format that can be used with \code{glmnet}
 #' @param cls class labels
-#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
+#' @param fitControl A list of training parameters.  See
+#'   \code{\link{caret::trainControl}} for detail
 #' @param filter_method ... c("ROC", "WILCOX")
 #' @param filter_direction ... c("two.sided", "greater", "less")
 #' @param observation_weights ...
 #' @param feature_weights ... c("uniform", "weighted")
-#' @return a trained model (final) - a list of training parameters (see above), fitted model, and selected features
+#' @return a trained model (final) - a list of training parameters (see above),
+#'   fitted model, and selected features
 cv_train_final <- function(data,
                            cls,
                            fitControl,
@@ -445,7 +485,8 @@ cv_train_final <- function(data,
   } else if (toupper(filter_method) == "ROC") {
     filtered_features <-
       filter_features_AUC(
-        dd = as.data.frame(data),  # this should work w/o as.data.frame. should check it out later.
+        dd = as.data.frame(data),
+        # this should work w/o as.data.frame. should check it out later.
         cls = cls,
         threshold = 0,
         direction = filter_direction
@@ -492,14 +533,14 @@ cv_train_final <- function(data,
 }
 
 
-#' A function that combines
-#'   cv_loop_train and cv_train_final
+#' A function that combines cv_loop_train and cv_train_final
 #'
-#' @param data input matrix, of dimension nobs x nvars; each row is an observation vector.
-#'             Since this is an input to \code{glmnet}, it should be the format that can be used
-#'             with \code{glmnet}
+#' @param data input matrix, of dimension nobs x nvars; each row is an
+#'   observation vector. Since this is an input to \code{glmnet}, it should be
+#'   the format that can be used with \code{glmnet}
 #' @param cls class labels
-#' @param fitControl A list of training parameters.  See \code{\link{caret::trainControl}} for detail
+#' @param fitControl A list of training parameters.  See
+#'   \code{\link{caret::trainControl}} for detail
 #' @param K ...
 #' @param resampling_rate ...
 #' @param n_features ...
@@ -510,9 +551,10 @@ cv_train_final <- function(data,
 #' @param observation_weights ...
 #' @param feature_weights ...
 #' @param predictor_score_threshold ...
-#' @return a list of \code{cv_loop_trained} (see \code{\link{cv_loop_train_iter}}),
-#' \code{classification_results} (see \code{\link{classification_summary_workflow}}), and
-#' \code{final_cv_model} (see \code{\link{cv_train_final}} and additional slots)
+#' @return a list of \code{cv_loop_trained} (see
+#'   \code{\link{cv_loop_train_iter}}), \code{classification_results} (see
+#'   \code{\link{classification_summary_workflow}}), and \code{final_cv_model}
+#'   (see \code{\link{cv_train_final}} and additional slots)
 train_to_final_model <-
   function(data,
            cls,

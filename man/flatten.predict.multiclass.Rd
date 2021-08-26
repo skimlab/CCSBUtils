@@ -11,7 +11,8 @@ flatten.predict.multiclass(predicted, target_classes, final.class = "final")
 
 \item{target_classes}{a set of classes to be flattened}
 
-\item{final.class}{the name (column heading) of final class outcomes, after flattening classes}
+\item{final.class}{the name (column heading) of final class outcomes, after
+flattening classes}
 }
 \value{
 the last column is added with the multi-class labels (flatted)

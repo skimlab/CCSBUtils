@@ -22,13 +22,14 @@ cv_loop_train_iter(
 \arguments{
 \item{ii}{integer (probably not needed)}
 
-\item{data}{input matrix, of dimension nobs x nvars; each row is an observation vector.
-Since this is an input to \code{glmnet}, it should be the format that can be used
-with \code{glmnet}}
+\item{data}{input matrix, of dimension nobs x nvars; each row is an
+observation vector. Since this is an input to \code{glmnet}, it should be
+the format that can be used with \code{glmnet}}
 
 \item{cls}{class labels}
 
-\item{fitControl}{A list of training parameters.  See \code{\link{caret::trainControl}} for detail}
+\item{fitControl}{A list of training parameters.  See
+\code{\link{caret::trainControl}} for detail}
 
 \item{resampling_rate}{...}
 
@@ -47,7 +48,8 @@ with \code{glmnet}}
 \item{feature_weighted}{...}
 }
 \value{
-a trained model - a list of training parameters (see above), fitted model, and selected features
+a trained model - a list of training parameters (see above), fitted
+  model, and selected features
 }
 \description{
 A function to train a model with CV

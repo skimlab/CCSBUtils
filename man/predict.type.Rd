@@ -9,15 +9,15 @@
 \arguments{
 \item{model}{a CV trained model, an output of cv_loop_train_iter}
 
-\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-with \code{\link{glmnet}}}
+\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an
+observation vector. Since this is an input to \code{\link{glmnet}}, it
+should be the format that can be used with \code{\link{glmnet}}}
 
 \item{type}{'raw' (default) or 'prob'}
 }
 \value{
-a named vector, either outputs class labels ('raw) or
-        probability tables, a column for each class label ('prob')
+a named vector, either outputs class labels ('raw) or probability
+  tables, a column for each class label ('prob')
 }
 \description{
 predict outcomes of observations in data using *selected features*

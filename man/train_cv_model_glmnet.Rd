@@ -13,15 +13,17 @@ train_cv_model_glmnet(
 )
 }
 \arguments{
-\item{data_train}{input matrix, of dimension nobs x nvars; each row is an observation vector.
-Since this is an input to \code{glmnet}, it should be the format that can be used
-with \code{glmnet}}
+\item{data_train}{input matrix, of dimension nobs x nvars; each row is an
+observation vector. Since this is an input to \code{glmnet}, it should be
+the format that can be used with \code{glmnet}}
 
 \item{cls_train}{class labels}
 
-\item{fitControl}{A list of training parameters.  See \code{\link{caret::trainControl}} for detail}
+\item{fitControl}{A list of training parameters.  See
+\code{\link{caret::trainControl}} for detail}
 
-\item{penalty.factor}{Separate penalty factors can be applied to each coefficient.  See \code{\link{glmnet::glmnet}} for detail}
+\item{penalty.factor}{Separate penalty factors can be applied to each
+coefficient.  See \code{\link{glmnet::glmnet}} for detail}
 }
 \value{
 A list returned from \code{caret::train}

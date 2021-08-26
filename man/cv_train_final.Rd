@@ -15,13 +15,14 @@ cv_train_final(
 )
 }
 \arguments{
-\item{data}{input matrix, of dimension nobs x nvars; each row is an observation vector.
-Since this is an input to \code{glmnet}, it should be the format that can be used
-with \code{glmnet}}
+\item{data}{input matrix, of dimension nobs x nvars; each row is an
+observation vector. Since this is an input to \code{glmnet}, it should be
+the format that can be used with \code{glmnet}}
 
 \item{cls}{class labels}
 
-\item{fitControl}{A list of training parameters.  See \code{\link{caret::trainControl}} for detail}
+\item{fitControl}{A list of training parameters.  See
+\code{\link{caret::trainControl}} for detail}
 
 \item{filter_method}{... c("ROC", "WILCOX")}
 
@@ -32,7 +33,8 @@ with \code{glmnet}}
 \item{feature_weights}{... c("uniform", "weighted")}
 }
 \value{
-a trained model (final) - a list of training parameters (see above), fitted model, and selected features
+a trained model (final) - a list of training parameters (see above),
+  fitted model, and selected features
 }
 \description{
 A function to train a *final* model with CV

@@ -12,7 +12,8 @@ compute_umap(se, assay = "data")
 \item{assay}{A name of the slot data is stored}
 }
 \value{
-A \code{\link{SummarizedExperiment}}  object with *UMAP* projection stored in \code{metadata(se[[umap]]} slot
+A \code{\link{SummarizedExperiment}}  object with *UMAP* projection
+  stored in \code{metadata(se[[umap]]} slot
 }
 \description{
 A function to perform *UMAP* projection of data

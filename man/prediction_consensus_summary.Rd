@@ -7,7 +7,8 @@
 prediction_consensus_summary(cv_trained)
 }
 \arguments{
-\item{cv_trained}{An output of \code{\link{cv_loop_train}} or \code{\link{cv_loop_train_parallel}}}
+\item{cv_trained}{An output of \code{\link{cv_loop_train}} or
+\code{\link{cv_loop_train_parallel}}}
 }
 \value{
 A table of consensus summary of outcomes

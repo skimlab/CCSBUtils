@@ -20,9 +20,9 @@ cv_loop_train(
 )
 }
 \arguments{
-\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-with \code{\link{glmnet}}}
+\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an
+observation vector. Since this is an input to \code{\link{glmnet}}, it
+should be the format that can be used with \code{\link{glmnet}}}
 
 \item{cls}{class labels}
 

@@ -2,7 +2,8 @@
 % Please edit documentation in R/classifier_train.R
 \name{cv_loop_train_parallel}
 \alias{cv_loop_train_parallel}
-\title{iterates training a model with CV (parallel version), using \code{\link{future.apply}}}
+\title{iterates training a model with CV (parallel version), using
+\code{\link{future.apply}}}
 \usage{
 cv_loop_train_parallel(
   data,
@@ -20,9 +21,9 @@ cv_loop_train_parallel(
 )
 }
 \arguments{
-\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an observation vector.
-Since this is an input to \code{\link{glmnet}}, it should be the format that can be used
-with \code{\link{glmnet}}}
+\item{data}{input matrix, of dimension \code{nobs x nvars}; each row is an
+observation vector. Since this is an input to \code{\link{glmnet}}, it
+should be the format that can be used with \code{\link{glmnet}}}
 
 \item{cls}{class labels}
 
@@ -45,8 +46,10 @@ with \code{\link{glmnet}}}
 \item{feature_weights}{...}
 }
 \value{
-a list of trained models -- see \code{\link{CCSBUtil::cv_loop_train_iter}}
+a list of trained models -- see
+  \code{\link{CCSBUtil::cv_loop_train_iter}}
 }
 \description{
-iterates training a model with CV (parallel version), using \code{\link{future.apply}}
+iterates training a model with CV (parallel version), using
+\code{\link{future.apply}}
 }

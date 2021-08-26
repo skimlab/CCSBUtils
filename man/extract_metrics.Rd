@@ -7,7 +7,8 @@
 extract_metrics(p.summary)
 }
 \arguments{
-\item{p.summary}{Either "train" or "test" slot of an output of \code{\link{models_performance_summary}}}
+\item{p.summary}{Either "train" or "test" slot of an output of
+\code{\link{models_performance_summary}}}
 
 \item{slot}{An index}
 }

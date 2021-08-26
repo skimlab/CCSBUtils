@@ -12,7 +12,8 @@ get_selected_features(fit, features)
 \item{features}{...}
 }
 \value{
-A table where each feature (row) is marked 1 if it is a selected feature, 0 otherwise.
+A table where each feature (row) is marked 1 if it is a selected
+  feature, 0 otherwise.
 }
 \description{
 A function to get selected features from a model, \code{fit}
