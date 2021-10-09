@@ -218,6 +218,8 @@ cv_loop_train_iter <-
            feature_weights) {
     aModel <- list()
 
+    stopifnot(is.factor(cls))
+
     maxTried = 5  # it was 20 initially, but reduced for computation and
     #     because it won't make sense anyway if you don't get
     #     enough filtered features within a few trials.
