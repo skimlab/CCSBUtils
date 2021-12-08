@@ -7,6 +7,7 @@
 train_to_final_model(
   data,
   cls,
+  stratify = NA,
   train_final = TRUE,
   train_consensus = TRUE,
   fitControl,

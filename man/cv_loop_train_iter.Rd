@@ -8,6 +8,7 @@ cv_loop_train_iter(
   ii,
   data,
   cls,
+  stratify = NA,
   fitControl,
   resampling_rate,
   n_features,

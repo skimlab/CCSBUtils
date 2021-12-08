@@ -17,7 +17,8 @@ Depends:
     future.apply,
     utils,
     ggpubr,
-    pROC
+    pROC,
+    splitstackshape
 Imports:
     SummarizedExperiment,
     tidyverse,

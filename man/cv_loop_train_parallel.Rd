@@ -8,6 +8,7 @@
 cv_loop_train_parallel(
   data,
   cls,
+  stratify = NA,
   fitControl,
   K = 25,
   resampling_rate = 0.8,

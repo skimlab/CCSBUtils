@@ -183,6 +183,14 @@ get_selected_features <- function(fit, features) {
     dplyr::mutate(predictor = ifelse(is.na(predictor), 0, predictor))
 }
 
+sample_stratified <- function(df, strata, n = 1, prop = 1) {
+  if (is.na(strata)) {
+    sstratified(data.frame(id = 1:nrow(df)), n, prop) %>% `[[`('id')
+  } else {
+    slice_sample(cbind(id = 1:nrow(df), strata))
+  }
+}
+
 
 #' A function to train a model with CV
 #'
@@ -207,6 +215,7 @@ cv_loop_train_iter <-
   function(ii,
            data,
            cls,
+           stratify = NA,
            fitControl,
            resampling_rate,
            n_features,
@@ -224,11 +233,23 @@ cv_loop_train_iter <-
     #     because it won't make sense anyway if you don't get
     #     enough filtered features within a few trials.
     for (nTried in 0:maxTried) {
-      train_index <-
-        caret::createDataPartition(cls,
-                                   p = resampling_rate,
-                                   list = FALSE,
-                                   times = 1)
+      # train_index <-
+      #   caret::createDataPartition(cls,
+      #                              p = resampling_rate,
+      #                              list = FALSE,
+      #                              times = 1)
+
+      if (!isTRUE(is.na(stratify))) {
+        df <- data.frame(cls, stratify)
+      } else {
+        df <- data.frame(cls)
+      }
+
+      df <- cbind(id = 1:nrow(df), df)
+
+      df_sampled <- splitstackshape::stratified(df, colnames(df)[-1], size = resampling_rate)
+
+      train_index <- df_sampled$id
 
       data_train <- data[train_index,]
       cls_train <- cls[train_index]
@@ -346,6 +367,7 @@ cv_loop_train_iter <-
 #' @return a list of trained models -- see \code{\link{cv_loop_train_iter}}
 cv_loop_train <- function(data,
                           cls,
+                          stratify = NA,
                           fitControl,
                           K = 25,
                           resampling_rate = 0.8,
@@ -369,6 +391,7 @@ cv_loop_train <- function(data,
       cv_loop_train_iter,
       data = data,
       cls = cls,
+      stratify = stratify,
       fitControl = fitControl,
       resampling_rate = resampling_rate,
       n_features = n_features,
@@ -407,6 +430,7 @@ cv_loop_train <- function(data,
 cv_loop_train_parallel <-
   function(data,
            cls,
+           stratify = NA,
            fitControl,
            K = 25,
            resampling_rate = 0.8,
@@ -430,6 +454,7 @@ cv_loop_train_parallel <-
         cv_loop_train_iter,
         data = data,
         cls = cls,
+        stratify = stratify,
         fitControl = fitControl,
         resampling_rate = resampling_rate,
         n_features = n_features,
@@ -560,6 +585,7 @@ cv_train_final <- function(data,
 train_to_final_model <-
   function(data,
            cls,
+           stratify = NA,
            train_final = TRUE,
            train_consensus = TRUE,
            fitControl,
@@ -582,6 +608,7 @@ train_to_final_model <-
         cv_loop_train_parallel(
           data = data,
           cls = cls,
+          stratify = stratify,
           fitControl = fitControl,
           K = K,
           resampling_rate = resampling_rate,

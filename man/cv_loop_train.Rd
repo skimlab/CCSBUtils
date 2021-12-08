@@ -7,6 +7,7 @@
 cv_loop_train(
   data,
   cls,
+  stratify = NA,
   fitControl,
   K = 25,
   resampling_rate = 0.8,
